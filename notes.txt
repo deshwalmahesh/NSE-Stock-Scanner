@@ -1,0 +1,16 @@
+V and Inverse V are formed by looking at the Highs and Lows
+
+Engulfings are formed when Open and Close of Current candle are covering COMPLETELY the High to Low of previous
+
+Look for Bullish (V, Bullish Engulfing) pattern at the END of DOWNWARD Trend (Short DOWNWARD Trend When the overall trend is upward, it'll give benefit) as market might go up
+
+
+Look for Bearish; (Inverted V, Bearish Engulfing pattern) at the END of Upward Trend (Short Upward Trend When the overall trend is down, it'll give benefit) as market might go down
+
+
+
+
+
+
+
+
