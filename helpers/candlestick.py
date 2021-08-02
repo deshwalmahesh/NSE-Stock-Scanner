@@ -15,7 +15,7 @@ class CandlePattern:
         return 'Green'
 
     
-    def find_name(self, open:float, close:float, low:float, high:float):
+    def find_name(self, open:float, close:float, low:float=None, high:float=None):
         '''
         Find if Candle is Doji / Hammer / Shooting Star / Normal
         args:
@@ -48,6 +48,7 @@ class CandlePattern:
             stocks: Pandas DataFrame
             names: Name of Columns representing ('DATE','OPEN','CLOSE','LOW','HIGH') in same order
         '''
+        result = []
         Date, Open, Close, Low, High = names
         
         if stocks.iloc[0,0] > stocks.iloc[1,0]: # if the first Date entry [0,0] is > previous data entry [1,0] then it is in descending order
@@ -66,6 +67,12 @@ class CandlePattern:
         
         elif (self.find_color(sec_open_, sec_close) == 'Green' and self.find_color(open_,close) == 'Red') and (sec_close <= open_ and sec_open_ >= close):
             return 'Bearish Engulfing'
+
+        elif (self.find_color(sec_open_, sec_close) == 'Green') and (sec_open_ < low and sec_close > high) and self.find_name(open_, close, low, high) == 'Red Doji':
+            return "Bearish Harami"
+
+        elif (self.find_color(sec_open_, sec_close) == 'Red') and (sec_close < low and sec_open_ > high) and self.find_name(open_, close, low, high) == 'Green Doji':
+            return "Bullish Harami"
         
         else:
             return 'Unknown'
@@ -99,6 +106,14 @@ class CandlePattern:
         
         elif (third_low < sec_low and third_high < sec_high) and (sec_high > curr_high and sec_low > curr_low):
             return 'Reverse V Pattern'
+
+        elif ((self.find_name(curr_open_, curr_close, curr_low, curr_high) == self.find_name(sec_open_, sec_close, sec_low, sec_high) == self.find_name(third_open_, third_close, third_low, third_high) == 'Bullish') 
+                and (third_close > sec_open_ > third_open_) and (sec_close > curr_open_ > sec_open_)):
+            return "Three White Soldiers"
+
+        elif ((self.find_name(curr_open_, curr_close, curr_low, curr_high) == self.find_name(sec_open_, sec_close, sec_low, sec_high) == self.find_name(third_open_, third_close, third_low, third_high) == 'Bearish') 
+                and (third_close < sec_open_ < third_open_) and (sec_close < curr_open_ < sec_open_)):
+            return "Three Black Crows"
         
         else:
             return 'Unknown'
