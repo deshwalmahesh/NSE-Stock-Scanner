@@ -18,10 +18,13 @@ import requests
 from bs4 import BeautifulSoup
 import random
 
+from multiprocessing import Pool
+from pathlib import Path
+
 
 
 class DataHandler:
-    def __init__(self, data_path = '../data', check_fresh = True):
+    def __init__(self, data_path = './data', check_fresh = True):
         self.present = date.today()
         self.week_num = self.present.strftime("%W")
         
@@ -45,7 +48,7 @@ class DataHandler:
         self.update_data(self.data)
   
     
-    def read_data(self, path = '../', file = 'data.json'):
+    def read_data(self, path = './', file = 'data.json'):
         '''
         Write the data in json file
         args:
@@ -56,7 +59,7 @@ class DataHandler:
             return json.load(f)
 
 
-    def update_data(self, updated_data:dict, path:str = '../', file:str = 'data.json'):
+    def update_data(self, updated_data:dict, path:str = './', file:str = 'data.json'):
         '''
         Update the data in the json file
         args:
@@ -87,3 +90,41 @@ class DataHandler:
         returns: DataFrame of that stock
         '''
         return pd.read_csv(join(self.data_path,self.all_stocks[name]))
+    
+    
+    
+    def download_new(self,name:str):
+        '''
+        Download a New Stock Data
+        args:
+            name: ID / name of the Stock
+        '''
+        try:
+            df = stock_df(symbol=name, from_date = current_date - timedelta(days = 600), to_date = current_date, series="EQ").drop(drop,axis=1)
+            df['DATE'] = pd.to_datetime(df['DATE'])
+            ID, NAME, _ = all_stocks[name].split('_')
+            save = f"./data/{ID}_{NAME}_{str(current_date)}.csv"
+            df.to_csv(save,index=None)
+        except Exception as e:
+            print(e)
+            pass
+
+
+    def multiprocess_download_stocks(self,path:str = './data', worker:int=4):
+        '''
+        Multiprocess Download stocks
+        args:
+            path: Path where files will be downloaded
+            worker: No of workers
+        '''
+        all_stocks = self.all_stocks
+
+        drop = ['SERIES','PREV. CLOSE','VWAP','VOLUME','VALUE','NO OF TRADES']
+        current_date = date.today()
+        stocks = set(all_stocks.keys()) - set([i.split('_')[0] for i in listdir('./data')]) 
+
+        pool = Pool(worker)
+        results = pool.map(self.download_new,stocks)
+        pool.close()
+        pool.join()
+        return 'Done'

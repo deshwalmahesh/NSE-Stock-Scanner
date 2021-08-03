@@ -38,7 +38,9 @@ class AnalyseStocks(DataHandler):
         if close < avg or close < open_ : # if red candle or below Average Line, Discard
             return False
         
-        diff = min(abs(low - avg), (abs(high - avg)), abs(open_ - avg), abs(close - avg))
+        limit = high * 0.05 if not limit else limit # assume limit to be 5% of low
+        diff = min(abs(low - avg), (abs(high - avg)), abs(open_ - avg), abs(close - avg)) # min diff between any of the 4 values
+        
         if diff <= limit:
             self.rising[symbol] = stocks.iloc[-mv//2:-1,-1].mean() < avg  # whether the moving average is Upward or Downward according to last 44 days moving averages
             return {symbol : round(diff,2)}
@@ -135,6 +137,79 @@ class AnalyseStocks(DataHandler):
             if result:
                 self.eligible.update(result)
         return self.eligible
+    
+    
+    def get_RSI(self, data, periods:int = 14, Close:str = 'CLOSE', ema:bool = True, return_df:bool = False):
+        '''
+        Calculate RSI: Relative Strength Index
+        args:
+            data: Pandas DataFrame
+            periods: Length of Moving Window
+            Close: Name of the column which contains the Closing Price
+            ema: Whether to use Exponential Moving Average instead of Simple
+            return_df: Whether to return the whole Dataframe. NOTE: It'll have the last value removed
+        '''
+        df = data.copy()
+        if df.iloc[0,0] > df.iloc[1,0]: # if the first Date entry [0,0] is > previous data entry [1,0] then it is in descending order, then reverse it for calculation
+            df.sort_index(ascending=False, inplace = True)
+
+        close_delta = df['CLOSE'].diff()
+
+        # Make two series: one for lower closes and one for higher closes
+        up = close_delta.clip(lower=0)
+        down = -1 * close_delta.clip(upper=0)
+
+        if ema: # Use exponential moving average
+            ma_up = up.ewm(com = periods - 1, min_periods = periods).mean()
+            ma_down = down.ewm(com = periods - 1, min_periods = periods).mean()
+
+        else: # Use simple moving average
+            ma_up = up.rolling(window = periods,).mean()
+            ma_down = down.rolling(window = periods,).mean()
+
+        rsi = ma_up / ma_down
+        rsi = 100 - (100/(1 + rsi))
+        df['RSI'] = rsi
+        df.sort_index(ascending=True, inplace = True)
+
+        if return_df:
+            return df
+
+        return df.iloc[0,-1]
+    
+    
+    
+    def get_ATR(self, df, window:int=14, names:tuple = ('OPEN','CLOSE','LOW','HIGH'), return_df:bool = False):
+        '''
+        Get the Average True Range. Concept of Volatility
+        args:
+            df: Pandas Data Frame
+            window: Rolling window or the period you want to consider
+            names: Column names showing ('OPEN','CLOSE','LOW','HIGH') in the same order
+            return_df: Whether to return the whole Df or the latest value
+        '''
+        Open, Close, Low, High = names
+        data = df.copy()
+        if data.iloc[0,0] > data.iloc[1,0]: # if the first Date entry [0,0] is > previous data entry [1,0] then it is in descending order, then reverse it for calculation
+            data.sort_index(ascending=False, inplace = True)
+
+
+        high_low = data[High] - data[Low]
+        high_close = np.abs(data[High] - data[Close].shift())
+        low_close = np.abs(data[Low] - data[Close].shift())
+
+        ranges = pd.concat([high_low, high_close, low_close], axis=1)
+        true_range = np.max(ranges, axis=1)
+
+        ATR = true_range.rolling(window).mean()
+        
+        data['ATR'] = ATR
+        data.sort_index(ascending=True, inplace = True)
+
+        if return_df:
+            return data
+
+        return data.iloc[0,-1]
             
     
     def plot_candlesticks(self,df, names = ('DATE','OPEN','CLOSE','LOW','HIGH'), mv:list = [44,100,200]):
