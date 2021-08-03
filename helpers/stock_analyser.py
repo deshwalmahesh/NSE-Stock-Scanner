@@ -210,6 +210,30 @@ class AnalyseStocks(DataHandler):
             return data
 
         return data.iloc[0,-1]
+        
+
+    def get_MA(self,df, window:int=14, names:tuple = ('OPEN','CLOSE','LOW','HIGH'), simple:bool = True):
+        '''
+        Get Simple Moving Average
+        args:
+            df: DataFrame of stocks
+            window: Rolling window or the period you want to consider
+            names: Column names showing ('OPEN','CLOSE','LOW','HIGH') in the same order
+            simple: Whether to return Simple or Exponential Moving Average
+        '''
+        Open, Close, Low, High = names
+        data = df.copy()
+        if data.iloc[0,0] > data.iloc[1,0]: # if the first Date entry [0,0] is > previous data entry [1,0] then it is in descending order, then reverse it for calculation
+            data.sort_index(ascending=False, inplace = True)
+
+        Average = f'{str(window)}-MA'
+        if simple:
+            data[Average]  = data[Close].rolling(window, min_periods = 1).mean()
+        else:
+            data[Average] = data[Close].ewm(span = window, adjust = False, min_periods = 1).mean()
+        
+        return data.sort_index(ascending = True, inplace = False)
+        
             
     
     def plot_candlesticks(self,df, names = ('DATE','OPEN','CLOSE','LOW','HIGH'), mv:list = [44,100,200]):
