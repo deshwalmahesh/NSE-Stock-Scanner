@@ -176,36 +176,44 @@ class Investing(AnalyseStocks):
         return pic
         
         
-    def get_particulars(self, name, budget:float, max_loss_capacity:float, risk_to_reward_ratio:float=2, Low:str = 'LOW', High:str = 'HIGH', delta:float = 0.0033, plot_candle:bool = False):
+    def get_particulars(self, name, budget:float, risk:float, risk_to_reward_ratio:float=1.99, entry:float=None, stop_loss:float=None, Low:str = 'LOW', High:str = 'HIGH', delta:float = 0.002, plot_candle:bool = False):
         '''
         Display the particulars of a trade before buying
         args:
             name: name of the particular stock
-            loss_capacity: How much loss you can survive at the end of day PER SHARE. Total capacity will be No of shares * per share loss capacity
+            risk: How much loss you can survive at the end of day PER TRADE. Total capacity will be No of shares * per share loss capacity
             risk_to_reward_ratio: How much profit you want to have. It is twice of loss_capacity per share for 44 Moving average
             budget : How much you have for investing purpose
             Low: Column name which describes LOW of the previous trade
             High =  Column name which describes High of the previous trade
+            entry: Manual Entry price price. Might be due to a support or Resistance lebvel or something else
+            stop_loss: Manual stop_loss
             delta: A min amount above which you'll buy
             plot_candle: Plot the candlestick for the stock
         '''   
         df = self.open_downloaded_stock(name)
         if risk_to_reward_ratio > 2:
             warnings.warn(f"Don't be greedy with risk to reward ratio of {risk_to_reward_ratio}. Stick to system")
-            
-        if  max_loss_capacity > 0.011 * budget:
-            warnings.warn(f"You are risking {round(max_loss_capacity/budget,2)*100}% of your total PORTFOLIO. Going Like this, you'll lose Rs {max_loss_capacity*15} in 15 Trades. Try keeping it less than 1.1% @ Rs {round(budget*0.011,2)}.")
-        
-        
-        buy_delta = df.loc[0,High] * delta  
+
+        delta = 0.001 if df.loc[0,High] >= 1000 else 0.002
+        buy_delta = df.loc[0,High] * delta
         sell_delta = min(df.loc[:1,Low].values) * delta
-        
-        risk = max_loss_capacity # per share
-        
-        entry = df.loc[0,High] + buy_delta # Last Day MAX + Delta
-        stop_loss = min(df.loc[:1,Low].values) - sell_delta # Min of the last 2 
+
+        if not entry:
+            entry = df.loc[0,High] + buy_delta # Last Day MAX + Delta
+
+        if budget < entry:
+            warnings.warn(f"Budget for {name} should be a minimum of Rs. {entry}")
+            return None
+
+        if not stop_loss:
+            stop_loss = min(df.loc[:1,Low].values) - sell_delta
         
         max_loss = entry - stop_loss
+        if  max_loss > 0.011 * budget:
+            warnings.warn(f"You are risking {round(max_loss/budget,2)*100}% of your total PORTFOLIO. Going Like this, you'll lose Rs {max_loss*15} in 15 Trades. Try keeping it less than 1.1% @ Rs {round(budget*0.011,2)}.")
+        
+
         stop_loss_perc = round((max_loss / entry) *100,2)
         diff = entry - stop_loss
         quantity = min(risk // diff , budget // entry)
@@ -216,10 +224,6 @@ class Investing(AnalyseStocks):
         
         if plot_candle:
             AnalyseStocks().plot_candlesticks(df)
-    
-        if budget < entry:
-            warnings.warn(f"Budget for {name} should be a minimum of Rs. {entry}")
-            return None
         
         if quantity < 1:
             r = round(risk + (diff - risk), 2)

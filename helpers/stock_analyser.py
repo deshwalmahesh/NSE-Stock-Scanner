@@ -233,8 +233,56 @@ class AnalyseStocks(DataHandler):
             data[Average] = data[Close].ewm(span = window, adjust = False, min_periods = 1).mean()
         
         return data.sort_index(ascending = True, inplace = False)
+
+
+    def get_ADX(self,data, interval:int = 14, names:tuple = ('OPEN','CLOSE','LOW','HIGH'),return_df:bool=True):
+        '''
+        Get the Value of Average Directional Index 
+        args
+            df: DataFrame of stocks
+            interval: Rolling window or the period you want to consider
+            names: Column names showing ('OPEN','CLOSE','LOW','HIGH') in the same order
+            return_df: Whether to return the whoe DataFrame or the Recent Value
+
+        '''
+        Open, Close, Low, High = names
+        df = data.copy()
+        if data.iloc[0,0] > data.iloc[1,0]: # if the first Date entry [0,0] is > previous data entry [1,0] then it is in descending order, then reverse it for calculation
+            data.sort_index(ascending=False, inplace = True)
         
-            
+
+        df['-DM'] = df[Low].shift(1) - df[Low]
+        df['+DM'] = df[High] - df[High].shift(1)
+        df['+DM'] = np.where((df['+DM'] > df['-DM']) & (df['+DM']>0), df['+DM'], 0.0)
+        df['-DM'] = np.where((df['-DM'] > df['+DM']) & (df['-DM']>0), df['-DM'], 0.0)
+        df['TR_TMP1'] = df[High] - df[Low]
+        df['TR_TMP2'] = np.abs(df[High] - df[Close].shift(1)) # Use Adjusted Close
+        df['TR_TMP3'] = np.abs(df[Low] - df[Close].shift(1)) # Use Adjusted Close
+        df['TR'] = df[['TR_TMP1', 'TR_TMP2', 'TR_TMP3']].max(axis=1)
+
+        df['TR'+str(interval)] = df['TR'].rolling(interval).sum()
+        df['+DMI'+str(interval)] = df['+DM'].rolling(interval).sum()
+        df['-DMI'+str(interval)] = df['-DM'].rolling(interval).sum()
+        df['+DI'+str(interval)] = df['+DMI'+str(interval)] /   df['TR'+str(interval)]*100
+        df['-DI'+str(interval)] = df['-DMI'+str(interval)] / df['TR'+str(interval)]*100
+        df['DI'+str(interval)+'-'] = abs(df['+DI'+str(interval)] - df['-DI'+str(interval)])
+        df['DI'+str(interval)] = df['+DI'+str(interval)] + df['-DI'+str(interval)]
+        df['DX'] = (df['DI'+str(interval)+'-'] / df['DI'+str(interval)])*100
+        df['ADX'+str(interval)] = df['DX'].rolling(interval).mean()
+        df['ADX'+str(interval)] =   df['ADX'+str(interval)].fillna(df['ADX'+str(interval)].mean())
+
+        # Delete the columns
+        del df['TR_TMP1'], df['TR_TMP2'], df['TR_TMP3'], df['TR'], df['TR'+str(interval)]
+        del df['+DMI'+str(interval)], df['DI'+str(interval)+'-']
+        del df['DI'+str(interval)], df['-DMI'+str(interval)]
+        del df['+DI'+str(interval)], df['-DI'+str(interval)]
+        del df['DX']
+
+        data.sort_index(ascending = True, inplace = False)
+        if return_df:
+            return df
+        return df.iloc[0,-3:]
+                     
     
     def plot_candlesticks(self,df, names = ('DATE','OPEN','CLOSE','LOW','HIGH'), mv:list = [44,100,200]):
         '''

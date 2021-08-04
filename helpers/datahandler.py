@@ -53,7 +53,8 @@ class DataHandler:
         self.update_data(self.data)
   
     
-    def read_data(self, path = './', file = 'data.json'):
+    @staticmethod
+    def read_data(path = './', file = 'data.json'):
         '''
         Write the data in json file
         args:
@@ -75,7 +76,7 @@ class DataHandler:
         with open(join(path,file), 'w') as f:
             json.dump(updated_data,f)
             return True 
-    
+
     
     def open_live_stock_data(self,name:str):
         '''
@@ -85,9 +86,9 @@ class DataHandler:
         '''
         drop = ['SERIES','PREV. CLOSE','VWAP','VOLUME','VALUE','NO OF TRADES']
         return stock_df(symbol=name, from_date = self.present - timedelta(days = 600), to_date = self.present, series="EQ").drop(drop,axis=1)
+
     
-    
-    def open_downloaded_stock(self,name:str):
+    def open_downloaded_stock(self, name:str):
         '''
         Open the Individual stock based on it's Official Term
         args:
@@ -98,8 +99,7 @@ class DataHandler:
         df['DATE'] = pd.to_datetime(df['DATE'])
         return df
     
-    
-    
+
     def download_new(self,name:str):
         '''
         Download a New Stock Data
@@ -136,10 +136,11 @@ class DataHandler:
 
     def check_new_data_availability(self):
         '''
-        Check and download new and unfinished data
+        Check and download new available or unfinished data
         '''
-        old = self.open_downloaded_stock('SBIN')
-        new = self.open_live_stock_data('SBIN')
+        name = random.choice(self.data['nifty_50'])
+        old = self.open_downloaded_stock(name)
+        new = self.open_live_stock_data(name)
         if old.iloc[0,0] < new.iloc[0,0]:
             print('New Data Available. Downloading now....')
             

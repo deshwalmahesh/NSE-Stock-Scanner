@@ -91,7 +91,15 @@ ________________________________________________________________________________
 
 
 
+What is an Average Directional Index (ADX) in trading?
+ADX is a powerful technical indicator which is used to determine the strength of a trend.
+The direction of the trend is used by the two accompanying indicators, the negative directional indicator (-DI) and the positive directional indicator (+DI)
+According to Investopedia, the trend has strength when ADX is above 25; and the trend is weak when ADX is below 20.
+Another interpretation is that if the +DI > -DI this is an indication of a “bull market” and if +DI < -DI then it’s a “bear market”. If the ADX is ≥ 30 the trend is “strong” otherwise it is “weak”.
+When the ADX index is not showing a clear trend this could mean a trend is about to be established or the market is too volatile to confirm a trend.
 
+
+____________________________________________________________________________________________________________________________________________
 
 
 
