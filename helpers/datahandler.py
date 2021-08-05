@@ -23,7 +23,7 @@ from pathlib import Path
 
 
 current_date = date.today()
-drop = ['SERIES','PREV. CLOSE','VWAP','VOLUME','VALUE','NO OF TRADES']
+drop = ['SERIES','PREV. CLOSE','VWAP','VOLUME','VALUE','NO OF TRADES', 'LTP']
 
 
 class DataHandler:
@@ -84,7 +84,7 @@ class DataHandler:
         args:
             name: ID of the stock given
         '''
-        drop = ['SERIES','PREV. CLOSE','VWAP','VOLUME','VALUE','NO OF TRADES']
+        drop = ['SERIES','PREV. CLOSE','VWAP','VOLUME','VALUE','NO OF TRADES', 'LTP']
         return stock_df(symbol=name, from_date = self.present - timedelta(days = 600), to_date = self.present, series="EQ").drop(drop,axis=1)
 
     

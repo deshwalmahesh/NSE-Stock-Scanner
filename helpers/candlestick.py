@@ -41,7 +41,7 @@ class CandlePattern:
             return 'Unknown' 
     
     
-    def double_candle_pattern(self, stocks, names = ('DATE','OPEN','CLOSE','LOW','HIGH')):
+    def double_candle_pattern(self, df, names = ('DATE','OPEN','CLOSE','LOW','HIGH')):
         '''
         Find Bullish or Bearish Engulfing or any pattern with 2 candles
         args:
@@ -50,13 +50,14 @@ class CandlePattern:
         '''
         result = []
         Date, Open, Close, Low, High = names
+        stocks = df.copy()
         
         if stocks.iloc[0,0] > stocks.iloc[1,0]: # if the first Date entry [0,0] is > previous data entry [1,0] then it is in descending order
             last_traded = stocks.iloc[0,:]
             second_last_traded = stocks.iloc[1,:]    
         else:
-            last_traded = stocks.iloc[-1,:0]
-            second_last_traded = stocks.iloc[-2,:0] 
+            last_traded = stocks.iloc[-1,:]
+            second_last_traded = stocks.iloc[-2,:] 
             
         low, high, open_ , close = last_traded[Low],last_traded[High],last_traded[Open],last_traded[Close]
         sec_low, sec_high, sec_open_ , sec_close = second_last_traded[Low], second_last_traded[High], second_last_traded[Open], second_last_traded[Close]
@@ -92,9 +93,9 @@ class CandlePattern:
             second_last_traded = stocks.iloc[1,:] 
             third_last_traded = stocks.iloc[2,:]   
         else:
-            last_traded = stocks.iloc[-1,:0]
-            second_last_traded = stocks.iloc[-2,:0]
-            third_last_traded = stocks.iloc[-3,:0]
+            last_traded = stocks.iloc[-1,]
+            second_last_traded = stocks.iloc[-2,]
+            third_last_traded = stocks.iloc[-3,]
             
         
         curr_low, curr_high, curr_open_ , curr_close = last_traded[Low],last_traded[High],last_traded[Open],last_traded[Close] # current Candle

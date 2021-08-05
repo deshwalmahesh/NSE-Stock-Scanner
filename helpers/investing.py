@@ -195,7 +195,7 @@ class Investing(AnalyseStocks):
         if risk_to_reward_ratio > 2:
             warnings.warn(f"Don't be greedy with risk to reward ratio of {risk_to_reward_ratio}. Stick to system")
 
-        delta = 0.001 if df.loc[0,High] >= 1000 else 0.002
+        delta = 0.0008 if df.loc[0,High] >= 1000 else 0.0015
         buy_delta = df.loc[0,High] * delta
         sell_delta = min(df.loc[:1,Low].values) * delta
 

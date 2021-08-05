@@ -4,6 +4,10 @@ import seaborn as sns
 import mplfinance as fplt
 import plotly.graph_objects as go
 from plotly import colors as plotly_colors
+from .candlestick import *
+
+CP = CandlePattern()
+
 
 class AnalyseStocks(DataHandler):
     def __init__(self, check_fresh = True):
@@ -15,6 +19,20 @@ class AnalyseStocks(DataHandler):
         self.registered_stocks = self.read_data()['registered_stocks']
         self.colors = self.read_data()['colors']
         self.rising = {}
+        self.recent_info = {}
+        self.indices = {'nifty_50': 'Nifty 50','nifty_100':'Nifty 100','nifty_200':'Nifty 200','nifty_500':'Nifty 500'}
+
+    
+    def get_index(self,symbol:str):
+        '''
+        Get the Index of the symbol from nifty 50,100,200,500
+        args:
+            symbol: Name /  ID od the company on NSE
+        '''
+        for index in self.indices.keys():
+            if symbol in self.data[index]:
+                return self.indices[index]
+        return 'Other'
     
 
     def is_ma_eligible(self, df, limit:float, mv = 44, names:tuple = ('DATE','OPEN','CLOSE','LOW','HIGH')):
@@ -48,17 +66,22 @@ class AnalyseStocks(DataHandler):
         return False
     
     
-    def BollingerBands(self,df, mv:int = 44):
+    def BollingerBands(self, df, mv:int = 44, Close:str = 'CLOSE', return_df:bool = True):
         '''
         Calculate the Upper and Lower Bollinger Bands Given on a Moving Average Line
         args:
             df: Stocks Data
             mv: Moving Average Line value
+            Close: Names of column which holds Closing Info
+            return_df = Whether to rturn the whole df or just recent values
         '''
-        ticker = df.sort_index(ascending=False)
+        ticker = df.copy()
 
-        sma = ticker['CLOSE'].rolling(window = mv).mean()
-        std = ticker['CLOSE'].rolling(window = mv).std(0)
+        if ticker.iloc[0,0] > ticker.iloc[1,0]: # if the first Date entry [0,0] is > previous data entry [1,0] then it is in descending order, then reverse it for calculation
+            ticker.sort_index(ascending=False, inplace = True)
+
+        sma = ticker[Close].rolling(window = mv).mean()
+        std = ticker[Close].rolling(window = mv).std(0)
 
         upper_bb = sma + std * 2
         lower_bb = sma - std * 2
@@ -66,61 +89,89 @@ class AnalyseStocks(DataHandler):
         ticker['Upper Bollinger'] = upper_bb
         ticker['Lower Bollinger'] = lower_bb
 
-        return ticker.sort_index(ascending=True)
+        ticker.sort_index(ascending=True, inplace = True)
+
+        if return_df:
+            return ticker
+
+        return ticker.iloc[0,-2:]
     
     
-    def Ichimoku_Cloud(self,df):
+    def Ichimoku_Cloud(self,df, names:tuple = ('OPEN','CLOSE','LOW','HIGH'), return_df:bool = True):
         '''
         Get the values of Lines for Ichimoku Cloud
         args:
             df: Dataframe
+            nameS: Names of Columns containing these Attributes
+            return_df = Whether to rturn the whole df or just recent values
         '''
-        d = df.sort_index(ascending=False)
+        Open, Close, Low, High = names
+        d = df.copy()
+        if d.iloc[0,0] > d.iloc[1,0]: # if the first Date entry [0,0] is > previous data entry [1,0] then it is in descending order, then reverse it for calculation
+            df.sort_index(ascending=False, inplace = True)
+
 
         # Tenkan-sen (Conversion Line): (9-period high + 9-period low)/2))
-        period9_high = d['HIGH'].rolling(window=9).max()
-        period9_low = d['LOW'].rolling(window=9).min()
+        period9_high = d[High].rolling(window=9).max()
+        period9_low = d[Low].rolling(window=9).min()
         tenkan_sen = (period9_high + period9_low) / 2
 
 
         # Kijun-sen (Base Line): (26-period high + 26-period low)/2))
-        period26_high = d['HIGH'].rolling(window=26).max()
-        period26_low = d['LOW'].rolling(window=26).min()
+        period26_high = d[High].rolling(window=26).max()
+        period26_low = d[Low].rolling(window=26).min()
         kijun_sen = (period26_high + period26_low) / 2
 
         # Senkou Span A (Leading Span A): (Conversion Line + Base Line)/2))
         senkou_span_a = ((tenkan_sen + kijun_sen) / 2).shift(26)
 
         # Senkou Span B (Leading Span B): (52-period high + 52-period low)/2))
-        period52_high = d['HIGH'].rolling(window=52).max()
-        period52_low = d['LOW'].rolling(window=52).min()
+        period52_high = d[High].rolling(window=52).max()
+        period52_low = d[Low].rolling(window=52).min()
         senkou_span_b = ((period52_high + period52_low) / 2).shift(26)
 
         # The most current closing price plotted 22 time periods behind (optional)
-        chikou_span = d['CLOSE'].shift(-26) # Given at Trading View.
+        chikou_span = d[Close].shift(-26) # Given at Trading View.
 
         d['blue_line'] = tenkan_sen
         d['red_line'] = kijun_sen
         d['cloud_green_line_a'] = senkou_span_a
         d['cloud_red_line_b'] = senkou_span_b
         d['lagging_line'] = chikou_span
-        return d.sort_index(ascending=True)
+
+        d.sort_index(ascending=True, inplace = True)
+
+        if return_df:
+            return d
+
+        return d.iloc[0,-1]
     
     
-    def _is_ichi(self,df, index:str = 'nifty_50'):
+    def Ichi_count(self, data, names = ('LOW', 'HIGH', 'cloud_green_line_a','cloud_red_line_b','lagging_line','blue_line','red_line')):
         '''
-        Get All available IchiMoku available stocks
+        Get The Count of how many Ichimoku Conditions this certain Data Holds. Conditions being:
+            1. If recentccandle is ABOVE Cloud, +1
+            2. if Lagging Line above price, +1
+            3. If Blue line has crossed red recentlu;, Yesterday +1
         args:
-            index: Index to Open From
+            data: Pandas DataFrame
+            names: Names of Columns which hold info about these in order : ('LOW', 'HIGH', 'cloud_green_line_a','cloud_red_line_b','lagging_line','blue_line','red_line')
         '''
         count  = 0
-        current = df.iloc[0,:]
-        if current['cloud_green_line_a'] < current['LOW'] and current['cloud_red_line_b'] < current['LOW']: # Cloud Below
-            count += 1
-        if df.loc[26,'lagging_line'] > df.loc[26,'HIGH']: # Lagging Line
-            count += 1
-        if df.loc[1,'blue_line'] <= df.loc[1,'red_line'].min() and current['blue_line'] >= current['red_line']: # Cross Over
-            count += 1
+
+        if isinstance(data, pd.DataFrame):
+            LOW, HIGH, cloud_green_line_a, cloud_red_line_b,lagging_line,blue_line,red_line = names
+            df = data.copy()
+            if df.iloc[0,0] < df.iloc[1,0]: # if the first Date entry [0,0] is < previous data entry [1,0] then it is in ascending order, then reverse it for calculation
+                df.sort_index(ascending=True, inplace = True)
+
+            current = df.iloc[0,:]
+            if current[cloud_green_line_a] < current[LOW] and current[cloud_red_line_b] < current[LOW]: # Cloud Below
+                count += 1
+            if df.loc[26,lagging_line] > df.loc[26,HIGH]: # Lagging Line
+                count += 1
+            if df.loc[1,blue_line] <= df.loc[1,red_line].min() and current[blue_line] >= current[red_line]: # Cross Over
+                count += 1
         
         return count
     
@@ -212,7 +263,7 @@ class AnalyseStocks(DataHandler):
         return data.iloc[0,-1]
         
 
-    def get_MA(self,df, window:int=14, names:tuple = ('OPEN','CLOSE','LOW','HIGH'), simple:bool = True):
+    def get_MA(self,df, window:int=14, names:tuple = ('OPEN','CLOSE','LOW','HIGH'), simple:bool = True, return_df:bool =  True):
         '''
         Get Simple Moving Average
         args:
@@ -220,6 +271,7 @@ class AnalyseStocks(DataHandler):
             window: Rolling window or the period you want to consider
             names: Column names showing ('OPEN','CLOSE','LOW','HIGH') in the same order
             simple: Whether to return Simple or Exponential Moving Average
+            return_df: Whether to return DF or the most recent values
         '''
         Open, Close, Low, High = names
         data = df.copy()
@@ -231,11 +283,16 @@ class AnalyseStocks(DataHandler):
             data[Average]  = data[Close].rolling(window, min_periods = 1).mean()
         else:
             data[Average] = data[Close].ewm(span = window, adjust = False, min_periods = 1).mean()
-        
-        return data.sort_index(ascending = True, inplace = False)
+
+        data.sort_index(ascending=True, inplace = True)
+
+        if return_df:
+            return data
+        return data.iloc[0,-1]
+    
 
 
-    def get_ADX(self,data, interval:int = 14, names:tuple = ('OPEN','CLOSE','LOW','HIGH'),return_df:bool=True):
+    def get_ADX(self,data, interval:int = 14, names:tuple = ('OPEN','CLOSE','LOW','HIGH'), return_df:bool=True):
         '''
         Get the Value of Average Directional Index 
         args
@@ -243,7 +300,6 @@ class AnalyseStocks(DataHandler):
             interval: Rolling window or the period you want to consider
             names: Column names showing ('OPEN','CLOSE','LOW','HIGH') in the same order
             return_df: Whether to return the whoe DataFrame or the Recent Value
-
         '''
         Open, Close, Low, High = names
         df = data.copy()
@@ -282,6 +338,94 @@ class AnalyseStocks(DataHandler):
         if return_df:
             return df
         return df.iloc[0,-3:]
+
+
+    def _recent_info(self, stock , mvs = [20,50,100,200], names:tuple = ('OPEN','CLOSE','LOW','HIGH')):
+        '''
+        Get recent info about the data having it's Moving Averages Values, Candle Patterns, RSI, ATR, Bollinger etc
+        args:
+            stock: DataFrame of stock or the Name
+            interval: Rolling window or the period you want to consider
+            names: Column names showing ('OPEN','CLOSE','LOW','HIGH') in the same order
+            return_df: Whether to return the whoe DataFrame or the Recent Value
+        '''
+        Open, Close, Low, High = names
+        results = []
+
+        if isinstance(stock, str):
+            data = self.open_downloaded_stock(stock)
+        else:
+            data = stock.copy()
+        
+        data.sort_index(ascending=False, inplace = True)
+        for mv in mvs:
+            results.append(self.get_MA(data, window = mv, return_df = False))
+        
+        results.append(self.get_RSI(data))
+        # results.append(self.get_ATR(data))
+        results.append(self.Ichi_count(self.Ichimoku_Cloud(data)))
+        results.append(CP.find_name(data.loc[0,Open],data.loc[0,Close],data.loc[0,Low],data.loc[0,High]))
+        results.append(CP.double_candle_pattern(data))
+        results.append(CP.triple_candle_pattern(data))
+        return results
+
+
+    def get_recent_info(self, nifty:int=200, col_names:tuple = ('DATE','OPEN','CLOSE','LOW','HIGH'), **kwargs):
+        '''
+        Get Recent Info for all of the stocks and sort them accordingaly
+        args:
+            nifty: Nifty Index to check
+        '''
+        for key in self.recent_info.keys():
+            if nifty == key:
+                return self.recent_info[nifty]
+            elif nifty < key:
+                return self.recent_info[key][self.recent_info[key]['Index'] == f'Nifty {nifty}']
+
+        DATE, Open, Close, Low, High = col_names
+        names = []
+        over_20 = []
+        over_50 = []
+        over_100 = []
+        over_200 = []
+        overbought = []
+        oversold = []
+        ichi = []
+        c1 = []
+        c2 = []
+        c3 = []
+        T = []
+        index = []
+
+        for name in self.data[f"nifty_{nifty}"]:
+            df  = self.open_downloaded_stock(name)
+            T.append(df.loc[0,DATE])
+            names.append(name)
+
+            result = self._recent_info(name, **kwargs)
+
+            over_20.append(df.loc[0,Close] > result[0])
+            over_50.append(df.loc[0,Close] > result[1])
+            over_100.append(df.loc[0,Close] > result[2])
+            over_200.append(df.loc[0,Close] > result[3])
+
+            overbought.append(result[4] > 70)
+            oversold.append(result[4] < 30)
+
+            ichi.append(result[5])
+
+            c1.append(result[6])
+            c2.append(result[7])
+            c3.append(result[8])
+
+            index.append(self.get_index(name))
+
+        df = pd.DataFrame({'Date':T,'Name':names,'Index':index,'Over 20-SMA':over_20, 'Over 50-SMA':over_50,'Over 100-SMA':over_100,'Over 200-SMA':over_200,
+         'Overbought':overbought, 'Oversold':oversold, 'Ichi Count':ichi, '1 Candle':c1,'2 Candles':c2,'3 Candles':c3})
+        
+        self.recent_info[nifty] = df
+        return df
+
                      
     
     def plot_candlesticks(self,df, names = ('DATE','OPEN','CLOSE','LOW','HIGH'), mv:list = [44,100,200]):

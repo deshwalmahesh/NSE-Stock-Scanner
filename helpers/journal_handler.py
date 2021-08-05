@@ -24,7 +24,7 @@ class JournalHandler:
         if call_reminder:
             self.journal = self.get_journal()
             self.check_21_days_rule(self.journal)
-            self.analyse_future_profit(self.journal, all_listed_stocks)
+            self.check_extra_profit_opportunity(self.journal, all_listed_stocks)
         
 
     def get_journal(self,excel_file_name:str='Finance Journal',working_sheet_name:str='Real Trades'):
@@ -52,7 +52,7 @@ class JournalHandler:
         return df
 
 
-    def analyse_future_profit(self, journal, all_stocks:dict, data_path = './data/', High = 'HIGH', Close = 'CLOSE'):
+    def check_extra_profit_opportunity(self, journal, all_stocks:dict, data_path = './data/', High = 'HIGH', Close = 'CLOSE'):
         '''
         Analyse the stocks where you can get some Extra profit by changing the Profit trigger as Stop Loss Trigger
         args:
@@ -62,7 +62,7 @@ class JournalHandler:
             High: Columns name which describe HIGH of the stock
             Close: Columns name which describe Close of the stock
         '''
-        active = journal[(journal['Exit Price'].isna()) & (journal['Exit Price'].isna())]
+        active = journal[(journal['Exit Price'].isna()) | (journal['Exit Date'].isna())]
 
         results = []
         for i,val in enumerate(active.index):
@@ -86,13 +86,14 @@ class JournalHandler:
         print('-'*75,'\n')
 
 
-    
     def check_21_days_rule(self,journal):
         '''
         If a stock was bought 21 days ago and still hasn't reached it's Target, Try selling it at 1:1.5 or 1:1 or current price
         args:
             journal: Dataframe of journal
         '''
+        journal = journal[(journal['Exit Price'].isna()) | (journal['Exit Date'].isna())] # stocks which are still active
+
         results = []
         for index,val in enumerate(journal.index):
             buy_date = journal.loc[val,'Buy Date']
