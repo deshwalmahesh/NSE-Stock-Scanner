@@ -14,7 +14,6 @@ class Investing(AnalyseStocks):
         self.rm = rolling_mean
         self._eligible = None
         self.data = self.read_data()
-        self.indices = {'nifty_50': 'Nifty 50','nifty_100':'Nifty 100','nifty_200':'Nifty 200','nifty_500':'Nifty 500'}
         self.all_ichi = None
         self.picked = None
         self._old_budget = -1
@@ -35,7 +34,7 @@ class Investing(AnalyseStocks):
         data = self.data[index] if index else self.all_stocks
         for name in data:
             df = self.Ichimoku_Cloud(self.open_downloaded_stock(name))
-            count = self._is_ichi(df,index) 
+            count = self.Ichi_count(df) 
             if count and df.loc[0,'HIGH'] < budget:
                 all_ichi[name] = count
                 
@@ -53,18 +52,6 @@ class Investing(AnalyseStocks):
         is_max = pd.Series(data=False, index=s.index)
         is_max[column] = s.loc[column] == True
         return ['' if is_max.any() else 'background-color: #f7a8a8' for v in is_max]
-    
-    
-    def get_index(self,symbol:str):
-        '''
-        Get the Index of the symbol from nifty 50,100,200,500
-        args:
-            symbol: Name /  ID od the company on NSE
-        '''
-        for index in self.indices.keys():
-            if symbol in self.data[index]:
-                return self.indices[index]
-        return 'Other'
     
     
     def calculate(self, budget, High:str = 'HIGH', Close:str = 'CLOSE', delta:float = 1, nifty:str = 'nifty_200', diff = 13, show_only:bool=True):
@@ -105,7 +92,7 @@ class Investing(AnalyseStocks):
             except Exception as e:
                     print('Exception Opening: ',key)
                 
-            if df.loc[0,High] + delta > budget:
+            if (df.loc[0,High] + delta > budget) or (df.loc[0,High] < 100):
                 del self._eligible[key]
                 
             else:
@@ -176,7 +163,7 @@ class Investing(AnalyseStocks):
         return pic
         
         
-    def get_particulars(self, name, budget:float, risk:float, risk_to_reward_ratio:float=1.99, entry:float=None, stop_loss:float=None, Low:str = 'LOW', High:str = 'HIGH', delta:float = 0.002, plot_candle:bool = False):
+    def get_particulars(self, name, budget:float, risk:float, risk_to_reward_ratio:float=1.999, entry:float=None, stop_loss:float=None, Low:str = 'LOW', High:str = 'HIGH', delta:float = 0.001, plot_candle:bool = False):
         '''
         Display the particulars of a trade before buying
         args:
@@ -195,7 +182,7 @@ class Investing(AnalyseStocks):
         if risk_to_reward_ratio > 2:
             warnings.warn(f"Don't be greedy with risk to reward ratio of {risk_to_reward_ratio}. Stick to system")
 
-        delta = 0.0008 if df.loc[0,High] >= 1000 else 0.0015
+        # delta = 0.0008 if df.loc[0,High] >= 1000 else 0.0015
         buy_delta = df.loc[0,High] * delta
         sell_delta = min(df.loc[:1,Low].values) * delta
 
@@ -210,9 +197,6 @@ class Investing(AnalyseStocks):
             stop_loss = min(df.loc[:1,Low].values) - sell_delta
         
         max_loss = entry - stop_loss
-        if  max_loss > 0.011 * budget:
-            warnings.warn(f"You are risking {round(max_loss/budget,2)*100}% of your total PORTFOLIO. Going Like this, you'll lose Rs {max_loss*15} in 15 Trades. Try keeping it less than 1.1% @ Rs {round(budget*0.011,2)}.")
-        
 
         stop_loss_perc = round((max_loss / entry) *100,2)
         diff = entry - stop_loss

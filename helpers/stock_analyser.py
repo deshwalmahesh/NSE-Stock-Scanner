@@ -5,6 +5,7 @@ import mplfinance as fplt
 import plotly.graph_objects as go
 from plotly import colors as plotly_colors
 from .candlestick import *
+from ta.trend import ADXIndicator
 
 CP = CandlePattern()
 
@@ -56,7 +57,7 @@ class AnalyseStocks(DataHandler):
         if close < avg or close < open_ : # if red candle or below Average Line, Discard
             return False
         
-        limit = high * 0.05 if not limit else limit # assume limit to be 5% of low
+        limit = low * 0.0015 if not limit else limit # assume limit to be 5% of low
         diff = min(abs(low - avg), (abs(high - avg)), abs(open_ - avg), abs(close - avg)) # min diff between any of the 4 values
         
         if diff <= limit:
@@ -66,7 +67,7 @@ class AnalyseStocks(DataHandler):
         return False
     
     
-    def BollingerBands(self, df, mv:int = 44, Close:str = 'CLOSE', return_df:bool = True):
+    def get_BollingerBands(self, df, mv:int = 20, Close:str = 'CLOSE', return_df:bool = True):
         '''
         Calculate the Upper and Lower Bollinger Bands Given on a Moving Average Line
         args:
@@ -229,7 +230,6 @@ class AnalyseStocks(DataHandler):
         return df.iloc[0,-1]
     
     
-    
     def get_ATR(self, df, window:int=14, names:tuple = ('OPEN','CLOSE','LOW','HIGH'), return_df:bool = False):
         '''
         Get the Average True Range. Concept of Volatility
@@ -292,7 +292,7 @@ class AnalyseStocks(DataHandler):
     
 
 
-    def get_ADX(self,data, interval:int = 14, names:tuple = ('OPEN','CLOSE','LOW','HIGH'), return_df:bool=True):
+    def get_ADX(self,data, interval:int = 14, names:tuple = ('OPEN','CLOSE','LOW','HIGH'), return_df:bool=False, return_adx_only:bool = True):
         '''
         Get the Value of Average Directional Index 
         args
@@ -300,44 +300,25 @@ class AnalyseStocks(DataHandler):
             interval: Rolling window or the period you want to consider
             names: Column names showing ('OPEN','CLOSE','LOW','HIGH') in the same order
             return_df: Whether to return the whoe DataFrame or the Recent Value
+            return_adx_only: Return only the Average value. Esle it returns all of Negative, Positive, Average
         '''
         Open, Close, Low, High = names
         df = data.copy()
-        if data.iloc[0,0] > data.iloc[1,0]: # if the first Date entry [0,0] is > previous data entry [1,0] then it is in descending order, then reverse it for calculation
-            data.sort_index(ascending=False, inplace = True)
-        
+        if df.iloc[0,0] > df.iloc[1,0]: # if the first Date entry [0,0] is > previous data entry [1,0] then it is in descending order, then reverse it for calculation
+            df.sort_index(ascending=False, inplace = True)
 
-        df['-DM'] = df[Low].shift(1) - df[Low]
-        df['+DM'] = df[High] - df[High].shift(1)
-        df['+DM'] = np.where((df['+DM'] > df['-DM']) & (df['+DM']>0), df['+DM'], 0.0)
-        df['-DM'] = np.where((df['-DM'] > df['+DM']) & (df['-DM']>0), df['-DM'], 0.0)
-        df['TR_TMP1'] = df[High] - df[Low]
-        df['TR_TMP2'] = np.abs(df[High] - df[Close].shift(1)) # Use Adjusted Close
-        df['TR_TMP3'] = np.abs(df[Low] - df[Close].shift(1)) # Use Adjusted Close
-        df['TR'] = df[['TR_TMP1', 'TR_TMP2', 'TR_TMP3']].max(axis=1)
+        adx = ADXIndicator(df[High], df[Low], df[Close])
 
-        df['TR'+str(interval)] = df['TR'].rolling(interval).sum()
-        df['+DMI'+str(interval)] = df['+DM'].rolling(interval).sum()
-        df['-DMI'+str(interval)] = df['-DM'].rolling(interval).sum()
-        df['+DI'+str(interval)] = df['+DMI'+str(interval)] /   df['TR'+str(interval)]*100
-        df['-DI'+str(interval)] = df['-DMI'+str(interval)] / df['TR'+str(interval)]*100
-        df['DI'+str(interval)+'-'] = abs(df['+DI'+str(interval)] - df['-DI'+str(interval)])
-        df['DI'+str(interval)] = df['+DI'+str(interval)] + df['-DI'+str(interval)]
-        df['DX'] = (df['DI'+str(interval)+'-'] / df['DI'+str(interval)])*100
-        df['ADX'+str(interval)] = df['DX'].rolling(interval).mean()
-        df['ADX'+str(interval)] =   df['ADX'+str(interval)].fillna(df['ADX'+str(interval)].mean())
+        df['-DM'] = adx.adx_neg()
+        df['+DM'] = adx.adx_pos()
+        df['ADX'] = adx.adx()
 
-        # Delete the columns
-        del df['TR_TMP1'], df['TR_TMP2'], df['TR_TMP3'], df['TR'], df['TR'+str(interval)]
-        del df['+DMI'+str(interval)], df['DI'+str(interval)+'-']
-        del df['DI'+str(interval)], df['-DMI'+str(interval)]
-        del df['+DI'+str(interval)], df['-DI'+str(interval)]
-        del df['DX']
-
-        data.sort_index(ascending = True, inplace = False)
+        df.sort_index(ascending = True, inplace = True)
         if return_df:
             return df
-        return df.iloc[0,-3:]
+        if return_adx_only:
+            return df.iloc[0,-1]
+        return df.iloc[0,-3:] # Negative, Positive, ADX
 
 
     def _recent_info(self, stock , mvs = [20,50,100,200], names:tuple = ('OPEN','CLOSE','LOW','HIGH')):
@@ -362,12 +343,45 @@ class AnalyseStocks(DataHandler):
             results.append(self.get_MA(data, window = mv, return_df = False))
         
         results.append(self.get_RSI(data))
-        # results.append(self.get_ATR(data))
         results.append(self.Ichi_count(self.Ichimoku_Cloud(data)))
+
         results.append(CP.find_name(data.loc[0,Open],data.loc[0,Close],data.loc[0,Low],data.loc[0,High]))
         results.append(CP.double_candle_pattern(data))
         results.append(CP.triple_candle_pattern(data))
+
+        results.append(self.get_ADX(data))
         return results
+
+
+    def has_golden_crossover(self, data, short_mv:int = 44, long_mv:int = 200,names:tuple = ('OPEN','CLOSE','LOW','HIGH'), lookback:int = 3):
+        '''
+        Give all the stocks where Golden Cross over has happend Yesterday
+        args:
+            df: DataFrame of Stock
+            short_mv: Short Period Moving Average Days
+            long_mv: Long Period Moving Average
+            names: Names of columns which have thesew respective values
+            lookback: Loockback day. 3 means compare MV values of today vs the day before yesterday
+        '''
+        if data.shape[0] < long_mv:
+            return False
+
+        Open, Close, Low, High = names
+        df = data.copy()
+        if df.iloc[0,0] > df.iloc[1,0]: # if the first Date entry [0,0] is > previous data entry [1,0] then it is in descending order, then reverse it for calculation
+            df.sort_index(ascending=False, inplace = True)
+
+        df['short']  = df[Close].rolling(short_mv, min_periods = 1).mean()
+        df['long'] = df[Close].rolling(long_mv, min_periods = 1).mean()
+        # return df
+
+        last_short = df.iloc[-lookback,-2]
+        current_short = df.iloc[-1,-2]
+        last_long = df.iloc[-lookback,-1]
+        current_long = df.iloc[-1,-1]
+
+        return (last_short <= last_long) and (current_short > current_long)
+
 
 
     def get_recent_info(self, nifty:int=200, col_names:tuple = ('DATE','OPEN','CLOSE','LOW','HIGH'), **kwargs):
@@ -390,24 +404,30 @@ class AnalyseStocks(DataHandler):
         over_200 = []
         overbought = []
         oversold = []
+        momentum = []
         ichi = []
         c1 = []
         c2 = []
         c3 = []
         T = []
         index = []
+        ltp = []
 
         for name in self.data[f"nifty_{nifty}"]:
             df  = self.open_downloaded_stock(name)
+
+            LTP = df.loc[0,Close] # last Trading PRice
+            ltp.append(LTP)
+
             T.append(df.loc[0,DATE])
             names.append(name)
 
             result = self._recent_info(name, **kwargs)
 
-            over_20.append(df.loc[0,Close] > result[0])
-            over_50.append(df.loc[0,Close] > result[1])
-            over_100.append(df.loc[0,Close] > result[2])
-            over_200.append(df.loc[0,Close] > result[3])
+            over_20.append(LTP > result[0])
+            over_50.append(LTP > result[1])
+            over_100.append(LTP > result[2])
+            over_200.append(LTP > result[3])
 
             overbought.append(result[4] > 70)
             oversold.append(result[4] < 30)
@@ -418,10 +438,12 @@ class AnalyseStocks(DataHandler):
             c2.append(result[7])
             c3.append(result[8])
 
+            momentum.append(result[9])
+
             index.append(self.get_index(name))
 
-        df = pd.DataFrame({'Date':T,'Name':names,'Index':index,'Over 20-SMA':over_20, 'Over 50-SMA':over_50,'Over 100-SMA':over_100,'Over 200-SMA':over_200,
-         'Overbought':overbought, 'Oversold':oversold, 'Ichi Count':ichi, '1 Candle':c1,'2 Candles':c2,'3 Candles':c3})
+        df = pd.DataFrame({'Date':T,'Name':names,'LTP':ltp,'Index':index,'Over 20-SMA':over_20, 'Over 50-SMA':over_50,'Over 100-SMA':over_100,'Over 200-SMA':over_200,
+         'Overbought':overbought, 'Oversold':oversold,'Momentum ADX':momentum ,'Ichi Count':ichi, '1 Candle':c1,'2 Candles':c2,'3 Candles':c3})
         
         self.recent_info[nifty] = df
         return df

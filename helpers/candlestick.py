@@ -24,21 +24,30 @@ class CandlePattern:
         '''    
         o_c_diff = abs(close - open)
         color = self.find_color(open,close)
+
+        if high == open == close:
+            return 'Dragonfly Doji'
+
+        if low == open == close:
+            return 'Gravestone Doji'
+
+        if open == close:
+            return 'Doji' # doji
         
-        if abs(low - min(close,open)) >  o_c_diff  or 0.15 * abs(low - min(close,open)) > abs(high - max(close,open)): # if 15% of lower > upper OR lower  > diffz
-            return 'Hammer' if color == 'Green' else 'Hanging Man'
+        if (abs(low - min(open,close)) > 2 * abs(open-close)) and (abs(low - min(open,close) > abs(high - max(open,close)))): # twice the diff of oopen-close
+            return 'Hammer' if color == 'Green' else 'Hanging Man' 
         
-        elif abs(high - max(close,open)) >  o_c_diff  or 0.15 * abs(high - max(close,open)) > abs(low - min(close,open)): # Opposite of Hammer
+        if (abs(high - max(open,close)) > 2 * abs(open-close)) and (abs(high - max(open,close) > abs(low - min(open,close)))): # Opposite of Hammer
             return 'Shooting Star' if color == 'Red' else 'Inverted Hammer'
         
-        elif abs(high - max(close,open)) > o_c_diff and abs(low - min(close,open)) > o_c_diff:
+        if abs(high - max(close,open)) > o_c_diff and abs(low - min(close,open)) > o_c_diff:
             return 'Green Doji' if color == 'Green' else 'Red Doji' # doji
         
-        elif abs(high - max(close,open)) <  0.15 * o_c_diff  and  abs(low - min(close,open)) < 0.15 * o_c_diff:
+        if abs(high - max(close,open)) <  0.15 * o_c_diff  and  abs(low - min(close,open)) < 0.15 * o_c_diff:
             return 'Bullish' if color == 'Green' else 'Bearish'
 
         else:
-            return 'Unknown' 
+            return f"Unknown {color}" 
     
     
     def double_candle_pattern(self, df, names = ('DATE','OPEN','CLOSE','LOW','HIGH')):
@@ -116,6 +125,7 @@ class CandlePattern:
                 and (third_close < sec_open_ < third_open_) and (sec_close < curr_open_ < sec_open_)):
             return "Three Black Crows"
         
+        # shooting star. Reverse V but dependent on low and middle one should be a shooting star or reverse hammer
         else:
             return 'Unknown'
         

@@ -63,6 +63,7 @@ class JournalHandler:
             Close: Columns name which describe Close of the stock
         '''
         active = journal[(journal['Exit Price'].isna()) | (journal['Exit Date'].isna())]
+        active.reset_index(drop=True, inplace=True)
 
         results = []
         for i,val in enumerate(active.index):
@@ -86,13 +87,15 @@ class JournalHandler:
         print('-'*75,'\n')
 
 
-    def check_21_days_rule(self,journal):
+    def check_21_days_rule(self,data):
         '''
         If a stock was bought 21 days ago and still hasn't reached it's Target, Try selling it at 1:1.5 or 1:1 or current price
         args:
             journal: Dataframe of journal
         '''
+        journal = data.copy()
         journal = journal[(journal['Exit Price'].isna()) | (journal['Exit Date'].isna())] # stocks which are still active
+        journal.reset_index(drop=True, inplace=True)
 
         results = []
         for index,val in enumerate(journal.index):
