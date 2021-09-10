@@ -30,27 +30,31 @@ class DataHandler:
     def __init__(self, data_path = './data', check_fresh = True):
         self.present = date.today()
         self.week_num = self.present.strftime("%W")
-        
+        self.read_data = DataHandler.read_data # because it is static
         self.data_path = data_path
+        
+        self.data = self.read_data()
+        self.all_stocks = self.read_data()['all_stocks']
         
         if check_fresh:
             self.__fresh()
-        self.data = self.read_data()
-        self.all_stocks = self.read_data()['all_stocks']
-
+            
         self.check_new_data_availability()
         
          
     def __fresh(self,):
         files = listdir(self.data_path)
         if not len(files):
-            raise Exception(f"No CSV data files present at {self.data_path} Download new data for analysis")
+            warnings.warn(f"No CSV data files present at {self.data_path} Downloading new data for analysis")
+            self.multiprocess_download_stocks()
 
         self.data = self.read_data()
         for file in files:
             key, _ , _ = file.split('_')
             self.data['all_stocks'][key] = file
         self.update_data(self.data)
+        self.data = self.read_data()
+        self.all_stocks = self.read_data()['all_stocks']
   
     
     @staticmethod

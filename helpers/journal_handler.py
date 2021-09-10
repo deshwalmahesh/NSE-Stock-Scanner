@@ -44,8 +44,9 @@ class JournalHandler:
         df.to_csv('csvfile.csv', encoding='utf-8', index=False)
         df = pd.read_csv('csvfile.csv')
         df.dropna(subset=['Entry'],inplace = True)
-        df['Buy Date'] = pd.to_datetime(df['Buy Date'])
-        df['Exit Date'] = pd.to_datetime(df['Exit Date'])
+        df['Buy Date'] = pd.to_datetime(df['Buy Date'],dayfirst=True,format = '%d/%m/%Y')
+        df['Exit Date'] = pd.to_datetime(df['Exit Date'],dayfirst=True,format = '%d/%m/%Y')
+        df['Exit Price'] = df['Exit Price'].astype('float64')
 
         df.reset_index(drop=True,inplace=True)
         remove('csvfile.csv')
@@ -81,7 +82,7 @@ class JournalHandler:
                 results.append((name,buy_date))
 
         if len(results):
-            print('These Stocks can give you extra profit by moving the Stop Loss as Target once Target is about to be triggered. Keep a track of these:','\n')
+            print('Trailing Stop Loss:','\n')
             for val in results:
                 print(f"{val[0]} bought on: {val[1]},\n")
         print('-'*75,'\n')
@@ -101,7 +102,7 @@ class JournalHandler:
         for index,val in enumerate(journal.index):
             buy_date = journal.loc[val,'Buy Date']
             name = journal.loc[val,'Stock Name']
-            if (current_date - journal.loc[1,'Buy Date']).days >= 21:
+            if (current_date - journal.loc[1,'Buy Date']).days > 28: # Almost 20 Trading Days
                 results.append((name,buy_date))
         if len(results):
             print('These stocks have crossed 21 days limit. Sell them at 1:1.5 or 1:1 or at Market Price')
@@ -110,4 +111,17 @@ class JournalHandler:
                 print(f"{item[0]} bought on {item[1]}\n")
 
         print('-'*75,'\n')
+        
+    
+    def total_pl(self,journal):
+        '''
+        Total Profit or Loss Up Until Now
+        args:
+            journal: Journal Data Frame
+        '''
+        x = journal.copy()
+        x = journal[~journal['Exit Date'].isna()]
+        x['p/l'] = x.apply(lambda row: ((row['Exit Price'] - row['Entry']) * row['Quantity'])  - row['Tax and Brokrage'] ,axis=1)
+        p_l = x['p/l'].sum()
+        return round(p_l,2)
     

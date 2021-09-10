@@ -85,6 +85,7 @@ class Investing(AnalyseStocks):
         three_can = []
         atr = []
         rsi = []
+        near_52 = []
         
         for key in keys:
             try:
@@ -102,13 +103,15 @@ class Investing(AnalyseStocks):
                 three_can.append(CP.triple_candle_pattern(df))
                 rsi.append(self.get_RSI(df))
                 atr.append(self.get_ATR(df))
+                near_52.append(self.near_52(df))
                 
                 
         columns = df.columns
         df = pd.DataFrame(values,columns=columns,index = range(len(values)))
         df = df.merge(pd.DataFrame({'SYMBOL':self._eligible.keys(), 'Diff':self._eligible.values()}),on='SYMBOL')
         
-        df['Rising'] = df['SYMBOL'].apply(lambda x: self.rising[x]) # Get Rising or Falling
+        # df['Rising'] = df['SYMBOL'].apply(lambda x: self.rising[x]) # Get Rising or Falling
+        df['Direction'] = near_52
         df['Ichi'] = df['SYMBOL'].apply(lambda x: ichi[x] if ichi.get(x) else 0)
         df['RSI'] = rsi
         df['ATR'] = atr

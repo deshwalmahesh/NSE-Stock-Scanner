@@ -54,7 +54,7 @@ class AnalyseStocks(DataHandler):
         last_traded = stocks.iloc[-1,:]
         low, high, open_ , close, avg, symbol = last_traded[Low],last_traded[High],last_traded[Open],last_traded[Close], last_traded[Average], last_traded['SYMBOL']
         
-        if close < avg or close < open_ : # if red candle or below Average Line, Discard
+        if (close < avg) or (close < open_) : # if red candle or below Average Line, Discard
             return False
         
         limit = low * 0.0015 if not limit else limit # assume limit to be 5% of low
@@ -383,18 +383,38 @@ class AnalyseStocks(DataHandler):
         return (last_short <= last_long) and (current_short > current_long)
 
 
+    def near_52(self, df, names:tuple = ('LOW','HIGH','52W L', '52W H'), threshold:float = 0.05):
+        '''
+        Get if Stock is Near 52 Week High or low. If near low, chances are that it'll keep on getting lower and vice versa. if high or low within 5% of 52 Week high or Low
+        args:
+            df: DataFrame of stock
+            names: column names which holds the following info in order
+            threshold: Fraction of the 52W high. if 0.05, it means that difference between current high/low and 52W high/low must be within 5% of 52 Week number
+         '''
+        Low, High, _52wl, _52wh = names
+        if abs(df.loc[0,High] - df.loc[0,_52wh]) <= df.loc[0,_52wh] * threshold: # Near 52 W H means Rising:
+            return 'Rising High'
+        elif abs(df.loc[0, Low] - df.loc[0,_52wl]) <= df.loc[0,_52wl] * threshold: # Near 52 W Low means Falling
+            return 'Falling Low'
+        return 'Undeterministic'
 
-    def get_recent_info(self, nifty:int=200, col_names:tuple = ('DATE','OPEN','CLOSE','LOW','HIGH'), **kwargs):
+
+    def get_recent_info(self, nifty:int=200, custom_list:tuple = None, col_names:tuple = ('DATE','OPEN','CLOSE','LOW','HIGH'), **kwargs):
         '''
         Get Recent Info for all of the stocks and sort them accordingaly
         args:
             nifty: Nifty Index to check
+            custom_list: Names of Stocks which you want to analyse
         '''
-        for key in self.recent_info.keys():
-            if nifty == key:
-                return self.recent_info[nifty]
-            elif nifty < key:
-                return self.recent_info[key][self.recent_info[key]['Index'] == f'Nifty {nifty}']
+        nif = self.data[f"nifty_{nifty}"]
+        if not custom_list:
+            for key in self.recent_info.keys():
+                if nifty == key:
+                    return self.recent_info[nifty]
+                elif nifty < key:
+                    return self.recent_info[key][self.recent_info[key]['Index'] == f'Nifty {nifty}']
+        else:
+            nif = custom_list
 
         DATE, Open, Close, Low, High = col_names
         names = []
@@ -413,7 +433,7 @@ class AnalyseStocks(DataHandler):
         index = []
         ltp = []
 
-        for name in self.data[f"nifty_{nifty}"]:
+        for name in nif:
             df  = self.open_downloaded_stock(name)
 
             LTP = df.loc[0,Close] # last Trading PRice
