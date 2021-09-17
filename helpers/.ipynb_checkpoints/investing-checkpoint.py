@@ -5,12 +5,12 @@ from .stock_analyser import *
 CP = CandlePattern()
 
 class Investing(AnalyseStocks):
-    def __init__(self,rolling_mean:int=44):
+    def __init__(self,rolling_mean:int=44,check_fresh = False):
         '''
         args:
             rolling_mean: Rolling Simple Mean to calulate
         '''
-        super().__init__()
+        super().__init__(check_fresh = check_fresh)
         self.rm = rolling_mean
         self._eligible = None
         self.data = self.read_data()

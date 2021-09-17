@@ -27,7 +27,7 @@ drop = ['SERIES','PREV. CLOSE','VWAP','VOLUME','VALUE','NO OF TRADES', 'LTP']
 
 
 class DataHandler:
-    def __init__(self, data_path = './data', check_fresh = True):
+    def __init__(self, data_path = './data', check_fresh = False):
         self.present = date.today()
         self.week_num = self.present.strftime("%W")
         self.read_data = DataHandler.read_data # because it is static
@@ -37,6 +37,7 @@ class DataHandler:
         self.all_stocks = self.read_data()['all_stocks']
         
         if check_fresh:
+            print('Checking Fresh Data.....')
             self.__fresh()
             
         self.check_new_data_availability()
