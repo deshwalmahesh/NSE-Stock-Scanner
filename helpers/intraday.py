@@ -44,7 +44,7 @@ class IntraDay():
                 name = df.loc[index,'symbol']
                 
                 minus = low - open_ if open_ == high else high - open_
-                change = round((minus/open_)*100, 2)
+                change = str(round((minus/open_)*100, 2))+'%'
                 
                 lis.append(name)
                 result['Long'].append((name,change,In.get_index(name))) if open_ == low else result['Short'].append((name,change,In.get_index(name)))

@@ -102,7 +102,7 @@ class JournalHandler:
         for index,val in enumerate(journal.index):
             buy_date = journal.loc[val,'Buy Date']
             name = journal.loc[val,'Stock Name']
-            if (current_date - journal.loc[1,'Buy Date']).days > 28: # Almost 20 Trading Days
+            if (current_date - journal.loc[val,'Buy Date']).days > 30: # Almost 21 Trading Days
                 results.append((name,buy_date))
         if len(results):
             print('These stocks have crossed 21 days limit. Sell them at 1:1.5 or 1:1 or at Market Price')

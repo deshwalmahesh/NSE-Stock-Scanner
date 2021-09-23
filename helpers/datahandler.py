@@ -30,17 +30,17 @@ class DataHandler:
     def __init__(self, data_path = './data', check_fresh = False):
         self.present = date.today()
         self.week_num = self.present.strftime("%W")
-        self.read_data = DataHandler.read_data # because it is static
+        
         self.data_path = data_path
         
+        self.read_data = DataHandler.read_data # because it is static
         self.data = self.read_data()
         self.all_stocks = self.read_data()['all_stocks']
         
         if check_fresh:
             print('Checking Fresh Data.....')
             self.__fresh()
-            
-        self.check_new_data_availability()
+            self.check_new_data_availability()
         
          
     def __fresh(self,):
