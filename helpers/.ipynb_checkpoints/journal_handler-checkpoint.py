@@ -44,8 +44,8 @@ class JournalHandler:
         df.to_csv('csvfile.csv', encoding='utf-8', index=False)
         df = pd.read_csv('csvfile.csv')
         df.dropna(subset=['Entry'],inplace = True)
-        df['Buy Date'] = pd.to_datetime(df['Buy Date'])
-        df['Exit Date'] = pd.to_datetime(df['Exit Date'])
+        df['Buy Date'] = pd.to_datetime(df['Buy Date'],dayfirst=True,format = '%d/%m/%Y')
+        df['Exit Date'] = pd.to_datetime(df['Exit Date'],dayfirst=True,format = '%d/%m/%Y')
         df['Exit Price'] = df['Exit Price'].astype('float64')
 
         df.reset_index(drop=True,inplace=True)
@@ -82,7 +82,7 @@ class JournalHandler:
                 results.append((name,buy_date))
 
         if len(results):
-            print('These Stocks can give you extra profit by moving the Stop Loss as Target once Target is about to be triggered. Keep a track of these:','\n')
+            print('Trailing Stop Loss:','\n')
             for val in results:
                 print(f"{val[0]} bought on: {val[1]},\n")
         print('-'*75,'\n')
@@ -102,7 +102,7 @@ class JournalHandler:
         for index,val in enumerate(journal.index):
             buy_date = journal.loc[val,'Buy Date']
             name = journal.loc[val,'Stock Name']
-            if (current_date - journal.loc[1,'Buy Date']).days >= 21:
+            if (current_date - journal.loc[val,'Buy Date']).days > 30: # Almost 21 Trading Days
                 results.append((name,buy_date))
         if len(results):
             print('These stocks have crossed 21 days limit. Sell them at 1:1.5 or 1:1 or at Market Price')
