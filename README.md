@@ -16,14 +16,18 @@ _______________________________________________________________
 Now Supports Live market data too (Not tick by tick but in an interval as it is updated in NSE website) to give the market mood and sentiment at selected intervals**
 
 _______________________________________________________________
-## Usage: 
-**Download and Install** `Python 3.7 and above`
+## Usage Steps: 
+1. **Download and Install** [Python 3.7 and above](https://www.python.org/downloads/)
+2.  Open Terminal ( For Linux) or Command Prompt or Git Shell in Windows
+3. Run the following Commands:
 ```
 git clone https://github.com/deshwalmahesh/NSE-Stock-Scanner.git
 cd ./NSE-Stock-Scanner
 pip install -r requirements.txt
 jupyter lab
 ```
+4. Open `Tutorial.ipynb` in your browser for Documentation and usage
+
 Enjoy ;)
 
 For usage, see the docstring of code or the example ipython Notebook `Test.ipynb`. (You need to restart the kernal a couple of times for data updation after download. It uses complex OOPS structure and Inheritance so it'll take some to fix that bug. Inconvenience is regretted)
