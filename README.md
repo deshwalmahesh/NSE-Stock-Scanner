@@ -1,3 +1,9 @@
+# Disclaimer:
+STOCK MARKET IS VERY RISKY UNTIL YOU DO IT PROPERLY. PLEASE DO NOT TAKE TRADES JUST BECAUSE THIS TOOL GIVES YOU THE NAME. APPLY YOUR OWN LEARNINGS, CREATE YOUR OWN STRATEGY, ASSESS RISK & TRADE THE PLAN.
+
+I personally have lost some money in intraday without plan and own judgement. This tool can help you with manual effort of selecting stocks from listed 1600 stocks but you have to use your knowledge after that.
+
+_______________________________________________________________
 # STOCK-SCANNING-TOOL:
 
 **Maybe India's first free offline tool to Scan stocks based on given strategies. 
@@ -50,9 +56,11 @@ Supports:
 
 _______________________________________________________________________________________________________________________________
 **[Intra-Day Trading](https://groww.in/p/intraday-trading/#:~:text=Intraday%20trading%20is%20the%20process,earn%20profits%20from%20stock%20trading.)**:
-1. Stock Selection for `Open == Low / High` at whole number (`x.00`) strategy.
-2. Narrow Range Strategy where the most recent day candle has the lowest range from the previous `N` ( default 7) days days candle, so the next day is most likely to breakout in either side.
-3. Marlet Mood and Sentiment analysis: % change of every Sector / Indices in Live Market. Gives you a mood of overall market right now based on which sector is performing with which mood live. Opens the top performing stocks from each sector 
+1. Live Market Mood such as TICK, TRIN, No of stocks trading currently at 52 Week High or Low
+2. Stock Selection for `Open == Low / High` at whole number (`x.00`) strategy.
+3. Probability based stock: Sorted Top`K` stocks based on probability which can give you atleast `x%` return either on Long or Short side. Based on `N` days data of your choice.
+4. Narrow Range Strategy where the most recent day candle has the lowest range from the previous `N` ( default 7) days days candle, so the next day is most likely to breakout in either side.
+5. Marlet Mood and Sentiment analysis: % change of every Sector / Indices in Live Market. Gives you a mood of overall market right now based on which sector is performing with which mood live. Opens the top performing stocks from each sector 
 
 _____________________________________________________________________________
 **Coming Next**:
