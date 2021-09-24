@@ -3,10 +3,16 @@ STOCK MARKET IS VERY RISKY UNTIL YOU DO IT PROPERLY. PLEASE DO NOT TAKE TRADES J
 
 I personally have lost some money in intraday without plan and own judgement. This tool can help you with manual effort of selecting stocks from listed 1600 stocks but you have to use your knowledge after that.
 
+## Currently Working On: 
+```diff
++ Live News based Sentiment AI model trained from scratch to predict the sentiment of news related to stock.
++ Useful for Intradat trades.
++ It'll predict whether a stock will go up or down based on the sentiment of the news.
+```
 _______________________________________________________________
-# STOCK-SCANNING-TOOL:
+## STOCK-SCANNING-TOOL:
 
-**Maybe India's first free offline tool to Scan stocks based on given strategies. 
+**Maybe India's first free offline tool to Scan stocks based on given strategies and one of the few to add concept of Market Mood. 
 Now Supports Live market data too (Not tick by tick but in an interval as it is updated in NSE website) to give the market mood and sentiment at selected intervals**
 
 _______________________________________________________________
