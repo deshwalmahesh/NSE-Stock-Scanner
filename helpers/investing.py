@@ -139,7 +139,7 @@ class Investing(AnalyseStocks):
             Close: Column Name which shows last closing price
             delta: Value above the Last Highest Traded Price
             nifty: nifty index to consider
-            diff: MAx Allowed Difference between Line and the Price
+            diff: MAx Allowed Difference between Line and the Price. diff is the %  of the Recent Closing Price
         '''
         self.picked = self.calculate(budget, High, Close, delta, nifty = nifty, diff = diff, show_only = False)
         

@@ -355,7 +355,7 @@ class AnalyseStocks(DataHandler):
 
     def has_golden_crossover(self, data, short_mv:int = 44, long_mv:int = 200,names:tuple = ('OPEN','CLOSE','LOW','HIGH'), lookback:int = 3):
         '''
-        Give all the stocks where Golden Cross over has happend Yesterday
+        Give all the stocks where Golden Cross over has happened Yesterday
         args:
             df: DataFrame of Stock
             short_mv: Short Period Moving Average Days

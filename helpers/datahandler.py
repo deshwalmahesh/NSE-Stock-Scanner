@@ -41,8 +41,8 @@ class DataHandler:
             print('Checking Fresh Data.....')
             self.__fresh()
             self.check_new_data_availability()
-        
-         
+
+           
     def __fresh(self,):
         files = listdir(self.data_path)
         if not len(files):
@@ -51,11 +51,12 @@ class DataHandler:
 
         self.data = self.read_data()
         for file in files:
-            key, _ , _ = file.split('_')
-            self.data['all_stocks'][key] = file
+            key, name , _ = file.split('_')
+            self.data['all_stocks'][key] = f"{key}_{name}_{str(current_date)}.csv"
+
         self.update_data(self.data)
         self.data = self.read_data()
-        self.all_stocks = self.read_data()['all_stocks']
+        self.all_stocks = self.data['all_stocks']
   
     
     @staticmethod
@@ -129,8 +130,7 @@ class DataHandler:
             path: Path where files will be downloaded
             worker: No of workers
         '''
-        all_stocks = self.all_stocks
-        stocks = set(all_stocks.keys()) - set([i.split('_')[0] for i in listdir('./data')]) 
+        stocks = set(self.all_stocks.keys()) - set([i.split('_')[0] for i in listdir('./data')]) 
 
         pool = Pool(worker)
         results = pool.map(self.download_new,stocks)
