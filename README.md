@@ -1,13 +1,16 @@
 # Disclaimer:
 STOCK MARKET IS VERY RISKY UNTIL YOU DO IT PROPERLY. PLEASE DO NOT TAKE TRADES JUST BECAUSE THIS TOOL GIVES YOU THE NAME. APPLY YOUR OWN LEARNINGS, CREATE YOUR OWN STRATEGY, ASSESS RISK & TRADE THE PLAN.
 
+```diff
+-Trade at you own risk as No one will be held responsible for the losses incurred exept the trader.
+```
+
 I personally have lost some money in intraday without plan and own judgement. This tool can help you with manual effort of selecting stocks from listed 1600 stocks but you have to use your knowledge after that.
 
-## Currently Working On: 
+## Currently Working On (Long term project): 
 ```diff
-+ Live News based Sentiment AI model trained from scratch to predict the sentiment of news related to stock.
-+ Useful for Intradat trades.
-+ It'll predict whether a stock will go up or down based on the sentiment of the news.
++ Live News based AI model to predict the sentiment of news related to stock. Predict probability whether a stock will go up or down based on the sentiment of the news.
++ RL (Reinforcement Learning) for trades suggestion given different conditions.
 ```
 _______________________________________________________________
 ## STOCK-SCANNING-TOOL:
@@ -28,11 +31,11 @@ jupyter lab
 ```
 4. Open `Tutorial.ipynb` in your browser for Documentation and usage
 
-Enjoy ;)
-
-For usage, see the docstring of code or the example ipython Notebook `Test.ipynb`. (You need to restart the kernal a couple of times for data updation after download. It uses complex OOPS structure and Inheritance so it'll take some to fix that bug. Inconvenience is regretted)
+For usage, see the docstring of code or the example ipython Notebook `Test.ipynb`
 
 **Please share your ideas, views, requirements, knowledge, bug reports, fixes and most importantly; reviews.**
+
+Enjoy the power of computing and trade safely ;)
 
 _______________________________________________________________________________
 ## Supports (still in development phase. Growing as learning):
