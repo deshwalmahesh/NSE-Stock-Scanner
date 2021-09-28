@@ -15,7 +15,7 @@ I personally have lost some money in intraday without plan and own judgement. Th
 _______________________________________________________________
 ## STOCK-SCANNING-TOOL:
 
-**Maybe India's first free offline tool to Scan stocks based on given strategies and one of the few to add concept of Market Mood. 
+**Maybe India's first free offline tool to have it all such as: Scan stocks based on swing strategies, intraday strategies, candlestick patterns, Indicator values, Charts, backtesting and one of the few to add concept of Live Market Mood. 
 Now Supports Live market data too (Not tick by tick but in an interval as it is updated in NSE website) to give the market mood and sentiment at selected intervals**
 
 _______________________________________________________________
