@@ -404,7 +404,7 @@ class AnalyseStocks(DataHandler):
         Get the MACD signal if there is a Buy or Sell signal. Buy signal is when MACD (Blue) line cuts the Signal (Red) from the downside. Vice Versa for Sell signal
         args:
             df: DataFrame of Stock
-            names: Names of columns which have thesew respective values
+            close: Names of column which has Closing Valuess
         '''
         df = data.copy()
         if df.iloc[0,0] > df.iloc[1,0]: # if the first Date entry [0,0] is > previous data entry [1,0] then it is in descending order, then reverse it for calculation

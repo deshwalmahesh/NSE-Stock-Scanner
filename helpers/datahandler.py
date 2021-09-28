@@ -49,15 +49,7 @@ class DataHandler:
             warnings.warn(f"No CSV data files present at {self.data_path} Downloading new data for analysis")
             self.multiprocess_download_stocks()
             
-            files = listdir(self.data_path)
-            self.data = self.read_data()
-            for file in files:
-                key, name , _ = file.split('_')
-                self.data['all_stocks'][key] = file
-
-            self.update_data(self.data)
-            self.data = self.read_data()
-            self.all_stocks = self.data['all_stocks']
+            self.update_fresh_files()
   
     
     @staticmethod
@@ -91,7 +83,7 @@ class DataHandler:
             name: ID of the stock given
         '''
         drop = ['SERIES','PREV. CLOSE','VWAP','VOLUME','VALUE','NO OF TRADES', 'LTP']
-        return stock_df(symbol=name, from_date = self.present - timedelta(days = 600), to_date = self.present, series="EQ").drop(drop,axis=1)
+        return stock_df(symbol=name, from_date = self.present - timedelta(days = 1000), to_date = self.present, series="EQ").drop(drop,axis=1)
 
     
     def open_downloaded_stock(self, name:str):
@@ -156,6 +148,23 @@ class DataHandler:
         if len(set(self.all_stocks.keys()) - set([i.split('_')[0] for i in listdir('./data')])):
             print('Data Count Mismatch. Downloading Missing.....')
             self.multiprocess_download_stocks()
+        
+        self.update_fresh_files()
+        
+
+    def update_fresh_files(self):
+        '''
+        Update Downloaded Files in the data.json
+        '''
+        files = listdir(self.data_path)
+        self.data = self.read_data()
+        for file in files:
+            key, name , _ = file.split('_')
+            self.data['all_stocks'][key] = file
+
+        self.update_data(self.data)
+        self.data = self.read_data()
+        self.all_stocks = self.data['all_stocks']
 
 
 
