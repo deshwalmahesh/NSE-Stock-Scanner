@@ -48,15 +48,16 @@ class DataHandler:
         if not len(files):
             warnings.warn(f"No CSV data files present at {self.data_path} Downloading new data for analysis")
             self.multiprocess_download_stocks()
+            
+            files = listdir(self.data_path)
+            self.data = self.read_data()
+            for file in files:
+                key, name , _ = file.split('_')
+                self.data['all_stocks'][key] = file
 
-        self.data = self.read_data()
-        for file in files:
-            key, name , _ = file.split('_')
-            self.data['all_stocks'][key] = f"{key}_{name}_{str(current_date)}.csv"
-
-        self.update_data(self.data)
-        self.data = self.read_data()
-        self.all_stocks = self.data['all_stocks']
+            self.update_data(self.data)
+            self.data = self.read_data()
+            self.all_stocks = self.data['all_stocks']
   
     
     @staticmethod
@@ -81,7 +82,6 @@ class DataHandler:
         '''
         with open(join(path,file), 'w') as f:
             json.dump(updated_data,f)
-            return True 
 
     
     def open_live_stock_data(self,name:str):

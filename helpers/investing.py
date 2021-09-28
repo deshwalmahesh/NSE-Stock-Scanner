@@ -86,6 +86,7 @@ class Investing(AnalyseStocks):
         atr = []
         rsi = []
         near_52 = []
+        macd_signal = []
         
         for key in keys:
             try:
@@ -104,6 +105,7 @@ class Investing(AnalyseStocks):
                 rsi.append(self.get_RSI(df))
                 atr.append(self.get_ATR(df))
                 near_52.append(self.near_52(df))
+                macd_signal.append(self.macd_signal(df))
                 
                 
         columns = df.columns
@@ -111,6 +113,7 @@ class Investing(AnalyseStocks):
         df = df.merge(pd.DataFrame({'SYMBOL':self._eligible.keys(), 'Diff':self._eligible.values()}),on='SYMBOL')
         
         # df['Rising'] = df['SYMBOL'].apply(lambda x: self.rising[x]) # Get Rising or Falling
+        df['MACD Signal'] = macd_signal
         df['Direction'] = near_52
         df['Ichi'] = df['SYMBOL'].apply(lambda x: ichi[x] if ichi.get(x) else 0)
         df['RSI'] = rsi

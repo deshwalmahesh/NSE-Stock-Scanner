@@ -5,7 +5,7 @@ import mplfinance as fplt
 import plotly.graph_objects as go
 from plotly import colors as plotly_colors
 from .candlestick import *
-from ta.trend import ADXIndicator
+from ta.trend import ADXIndicator, macd_diff
 
 CP = CandlePattern()
 
@@ -398,6 +398,29 @@ class AnalyseStocks(DataHandler):
             return 'Falling Low'
         return 'Undeterministic'
 
+    
+    def macd_signal(self, data, close:str = 'CLOSE'):
+        '''
+        Get the MACD signal if there is a Buy or Sell signal. Buy signal is when MACD (Blue) line cuts the Signal (Red) from the downside. Vice Versa for Sell signal
+        args:
+            df: DataFrame of Stock
+            names: Names of columns which have thesew respective values
+        '''
+        df = data.copy()
+        if df.iloc[0,0] > df.iloc[1,0]: # if the first Date entry [0,0] is > previous data entry [1,0] then it is in descending order, then reverse it for calculation
+            df.sort_index(ascending=False, inplace = True)
+
+    #     macd_blue_line = macd(df['CLOSE'])
+    #     signal_red_line = macd_signal(df['CLOSE'])
+        diff = macd_diff(df[close])
+
+        if (diff.iloc[-2] < 0) and (diff.iloc[-1] > 0):
+            signal = 'Buy'
+        elif (diff.iloc[-2] > 0) and diff.iloc[-1] < 0:
+            signal = 'Sell'
+        else: signal = 'No Signal'
+        return signal
+
 
     def get_recent_info(self, nifty:int=200, custom_list:tuple = None, col_names:tuple = ('DATE','OPEN','CLOSE','LOW','HIGH'), **kwargs):
         '''
@@ -432,6 +455,7 @@ class AnalyseStocks(DataHandler):
         T = []
         index = []
         ltp = []
+        macd_signal = []
 
         for name in nif:
             df  = self.open_downloaded_stock(name)
@@ -461,15 +485,16 @@ class AnalyseStocks(DataHandler):
             momentum.append(result[9])
 
             index.append(self.get_index(name))
+            macd_signal.append(self.macd_signal(df))
 
-        df = pd.DataFrame({'Date':T,'Name':names,'LTP':ltp,'Index':index,'Over 20-SMA':over_20, 'Over 50-SMA':over_50,'Over 100-SMA':over_100,'Over 200-SMA':over_200,
+        df = pd.DataFrame({'Date':T,'Name':names,'LTP':ltp,'Index':index,"MACD Signal":macd_signal,'Over 20-SMA':over_20, 'Over 50-SMA':over_50,'Over 100-SMA':over_100,'Over 200-SMA':over_200,
          'Overbought':overbought, 'Oversold':oversold,'Momentum ADX':momentum ,'Ichi Count':ichi, '1 Candle':c1,'2 Candles':c2,'3 Candles':c3})
         
         self.recent_info[nifty] = df
         return df
 
                      
-    
+                     
     def plot_candlesticks(self,df, names = ('DATE','OPEN','CLOSE','LOW','HIGH'), mv:list = [44,100,200]):
         '''
         Plot a candlestick on a given dataframe
