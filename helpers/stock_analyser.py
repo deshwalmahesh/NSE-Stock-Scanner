@@ -303,7 +303,7 @@ class AnalyseStocks(DataHandler):
         return data.iloc[0,-1]
 
     
-    def get_CCI(self, data, window:int = 20, names:tuple = ('OPEN','CLOSE','LOW','HIGH'), return_df:bool=False, signal_only:bool = True):
+    def get_CCI(self, data, window:int = 20, names:tuple = ('OPEN','CLOSE','LOW','HIGH', 'DATE'), return_df:bool=False, signal_only:bool = True):
         '''
         Get the CCI (Commodity Channel Index). If it crosses below -100, buy and if it crosses above +100, Sell
         args
@@ -313,7 +313,7 @@ class AnalyseStocks(DataHandler):
             return_df: Whether to return the whoe DataFrame or the Recent Value
             generate signal: Whether to generate the CCI Buy or Sell Signal only instead of value
         '''
-        Open, Close, Low, High = names
+        Open, Close, Low, High, Date = names
         df = data.copy()
         if df.iloc[0,0] > df.iloc[1,0]: # if the first Date entry [0,0] is > previous data entry [1,0] then it is in descending order, then reverse it for calculation
             df.sort_index(ascending=False, inplace = True)
