@@ -87,6 +87,7 @@ class Investing(AnalyseStocks):
         rsi = []
         near_52 = []
         macd_signal = []
+        cci_value = []
         
         for key in keys:
             try:
@@ -106,6 +107,7 @@ class Investing(AnalyseStocks):
                 atr.append(self.get_ATR(df))
                 near_52.append(self.near_52(df))
                 macd_signal.append(self.macd_signal(df))
+                cci_value.append(self.get_CCI(df,signal_only=False, return_df=False))
                 
                 
         columns = df.columns
@@ -113,10 +115,12 @@ class Investing(AnalyseStocks):
         df = df.merge(pd.DataFrame({'SYMBOL':self._eligible.keys(), 'Diff':self._eligible.values()}),on='SYMBOL')
         
         # df['Rising'] = df['SYMBOL'].apply(lambda x: self.rising[x]) # Get Rising or Falling
+        df['CCI Value'] = cci_value
+        df['RSI Value'] = rsi
         df['MACD Signal'] = macd_signal
         df['Direction'] = near_52
         df['Ichi'] = df['SYMBOL'].apply(lambda x: ichi[x] if ichi.get(x) else 0)
-        df['RSI'] = rsi
+        
         df['ATR'] = atr
         
         df['Triple Candle'] = three_can

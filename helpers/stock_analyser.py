@@ -5,7 +5,7 @@ import mplfinance as fplt
 import plotly.graph_objects as go
 from plotly import colors as plotly_colors
 from .candlestick import *
-from ta.trend import ADXIndicator, macd_diff
+from ta.trend import ADXIndicator, macd_diff, cci
 
 CP = CandlePattern()
 
@@ -191,7 +191,7 @@ class AnalyseStocks(DataHandler):
         return self.eligible
     
     
-    def get_RSI(self, data, periods:int = 14, Close:str = 'CLOSE', ema:bool = True, return_df:bool = False):
+    def get_RSI(self, data, periods:int = 14, Close:str = 'CLOSE', ema:bool = True, return_df:bool = False, signal_only:bool = False):
         '''
         Calculate RSI: Relative Strength Index
         args:
@@ -200,6 +200,7 @@ class AnalyseStocks(DataHandler):
             Close: Name of the column which contains the Closing Price
             ema: Whether to use Exponential Moving Average instead of Simple
             return_df: Whether to return the whole Dataframe. NOTE: It'll have the last value removed
+            signal_only: Whether to return absolute value or Buy / Sell Signal
         '''
         df = data.copy()
         if df.iloc[0,0] > df.iloc[1,0]: # if the first Date entry [0,0] is > previous data entry [1,0] then it is in descending order, then reverse it for calculation
@@ -226,8 +227,19 @@ class AnalyseStocks(DataHandler):
 
         if return_df:
             return df
+        
+        if signal_only:
+            if df.iloc[0,-1] > 70:
+                signal = "Sell"
+            
+            elif df.iloc[0,-1] < 30:
+                signal = "Buy"
 
-        return df.iloc[0,-1]
+            else: signal = "No Signal"
+        
+            return signal
+
+        return df.iloc[0,-1] # return Recent RSI value
     
     
     def get_ATR(self, df, window:int=14, names:tuple = ('OPEN','CLOSE','LOW','HIGH'), return_df:bool = False):
@@ -289,7 +301,41 @@ class AnalyseStocks(DataHandler):
         if return_df:
             return data
         return data.iloc[0,-1]
+
     
+    def get_CCI(self, data, window:int = 20, names:tuple = ('OPEN','CLOSE','LOW','HIGH'), return_df:bool=False, signal_only:bool = True):
+        '''
+        Get the CCI (Commodity Channel Index). If it crosses below -100, buy and if it crosses above +100, Sell
+        args
+            df: DataFrame of stocks
+            window: Rolling window or the period you want to consider
+            names: Column names showing ('OPEN','CLOSE','LOW','HIGH') in the same order
+            return_df: Whether to return the whoe DataFrame or the Recent Value
+            generate signal: Whether to generate the CCI Buy or Sell Signal only instead of value
+        '''
+        Open, Close, Low, High = names
+        df = data.copy()
+        if df.iloc[0,0] > df.iloc[1,0]: # if the first Date entry [0,0] is > previous data entry [1,0] then it is in descending order, then reverse it for calculation
+            df.sort_index(ascending=False, inplace = True)
+
+        df['CCI'] = cci(df[High],df[Low],df[Close], window = window)
+        
+        if return_df:
+            df.sort_index(ascending = True, inplace = True)
+            return df
+        
+        if signal_only:
+            if df.iloc[-2,-1] < -100 and df.iloc[-1,-1] > -100: # if recent is above -100 and the previous was below -100; means it has cut -100 from the below 
+                signal = 'Buy'
+            
+            elif df.iloc[-2,-1] > 100 and df.iloc[-1,-1] < 100:  # if recent is below +100 and the previous was above +100; means it has cut +100 from the above
+                signal = "Sell"
+            
+            else: signal = "No Signal"
+            
+            return signal
+        
+        return round(df.iloc[-1,-1],2) # Return the absolute value
 
 
     def get_ADX(self,data, interval:int = 14, names:tuple = ('OPEN','CLOSE','LOW','HIGH'), return_df:bool=False, return_adx_only:bool = True):
@@ -342,7 +388,7 @@ class AnalyseStocks(DataHandler):
         for mv in mvs:
             results.append(self.get_MA(data, window = mv, return_df = False))
         
-        results.append(self.get_RSI(data))
+        results.append(self.get_RSI(data, signal_only= True))
         results.append(self.Ichi_count(self.Ichimoku_Cloud(data)))
 
         results.append(CP.find_name(data.loc[0,Open],data.loc[0,Close],data.loc[0,Low],data.loc[0,High]))
@@ -445,8 +491,6 @@ class AnalyseStocks(DataHandler):
         over_50 = []
         over_100 = []
         over_200 = []
-        overbought = []
-        oversold = []
         momentum = []
         ichi = []
         c1 = []
@@ -456,6 +500,8 @@ class AnalyseStocks(DataHandler):
         index = []
         ltp = []
         macd_signal = []
+        cci_signal = []
+        rsi_signal = []
 
         for name in nif:
             df  = self.open_downloaded_stock(name)
@@ -473,9 +519,6 @@ class AnalyseStocks(DataHandler):
             over_100.append(LTP > result[2])
             over_200.append(LTP > result[3])
 
-            overbought.append(result[4] > 70)
-            oversold.append(result[4] < 30)
-
             ichi.append(result[5])
 
             c1.append(result[6])
@@ -485,10 +528,14 @@ class AnalyseStocks(DataHandler):
             momentum.append(result[9])
 
             index.append(self.get_index(name))
-            macd_signal.append(self.macd_signal(df))
 
-        df = pd.DataFrame({'Date':T,'Name':names,'LTP':ltp,'Index':index,"MACD Signal":macd_signal,'Over 20-SMA':over_20, 'Over 50-SMA':over_50,'Over 100-SMA':over_100,'Over 200-SMA':over_200,
-         'Overbought':overbought, 'Oversold':oversold,'Momentum ADX':momentum ,'Ichi Count':ichi, '1 Candle':c1,'2 Candles':c2,'3 Candles':c3})
+            rsi_signal.append(result[4])
+            macd_signal.append(self.macd_signal(df))
+            cci_signal.append(self.get_CCI(df, signal_only=True))
+
+        df = pd.DataFrame({'Date':T,'Name':names,'LTP':ltp,'Index':index,"CCI Signal":cci_signal,'RSI Signal':rsi_signal, "MACD Signal":macd_signal,
+        'Over 20-SMA':over_20, 'Over 50-SMA':over_50,'Over 100-SMA':over_100,'Over 200-SMA':over_200,
+         'Momentum ADX':momentum ,'Ichi Count':ichi, '1 Candle':c1,'2 Candles':c2,'3 Candles':c3})
         
         self.recent_info[nifty] = df
         return df
