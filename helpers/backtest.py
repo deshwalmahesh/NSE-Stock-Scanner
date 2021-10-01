@@ -11,7 +11,7 @@ class Backtest():
     def __init__(self):
         '''
         '''
-        self.history = {}
+        self.strategies = {'cci':self.cci, 'macd':self.macd, 'rsi': self.rsi}
 
 
     def history_init(self, name):
@@ -83,117 +83,11 @@ class Backtest():
         self.history[name]['sells'] = self.sells # ideally No of self.buys == self.sells or self.buys = self.sells + 1
 
 
-    def MACD(self,min_days:int = 365, top_n:int = 10, nifty:str = 'nifty_50', cols = ('OPEN','CLOSE','LOW','HIGH', 'DATE'), window_slow:int = 26, window_fast:int = 12, window_sign:int = 9, return_df:bool = True):
+    def backtest(self, strategy:str, min_days:int = 365, top_n:int = 10, nifty:str = 'nifty_50', return_df:bool = True, **kwargs):
         '''
-        Test MACD Stratedy. Buy next day when MACD cuts Signal from below and Sell next day when MACD cuts Signal from above.
-        Next: Implement strategy to add constraint to reduce frequent Buy - Buy, Buy-Sell, Sell-Sell, Sell-Buy if it happens within "n" days in a volatile market
+        Test the strategies based on the given Buy and Sell Criteria
         args:
-            min_days: Minimum no of days for a stock to be present at the stock market. Stock newer than these many Trading days will be discarded
-            top_n: How many self.historys to return
-            nifty: Nifty Index. Select from [nifty_50, nifty_200, nifty_500, all]
-            cols: Columns that contains the Open and Close price
-            window_slow: Slowing line Period
-            window_fast: Fast Lione Length Period
-            window_sign: Signal Line Period
-            
-        returns: A dictonary of top-n stocks which gave highest returns
-        '''
-        data = In.data['all_stocks'] if nifty == 'all' else In.data[nifty]
-        OPEN, CLOSE, LOW, HIGH, DATE = cols
-
-        for name in data:
-            df = In.open_downloaded_stock(name)
-            if df.shape[0] >= min_days: # Most stocks are atleast 407 days old on an average
-                
-                self.history_init(name)
-                self.history[name]['days'] = df.shape[0]
-                self.buys = 0
-                self.sells = 0
-                account = 0 # Initial account is 0.
-                self.can_buy = True
-                
-                df.sort_index(ascending=False, inplace = True) # Sort the dataframe
-                
-                df['MACD Diff'] = macd_diff(df[CLOSE], window_slow = window_slow, window_fast = window_fast, window_sign = window_sign) # Get MACD DIfference
-                
-                df.sort_index(ascending=False, inplace = True) # Sort Again from oldest to newest
-                df.dropna(inplace=True) # Drop the oldest ones
-                df.reset_index(inplace=True,drop=True)
-
-                for index in df.index[1:-1]:
-                    if (df.loc[index-1,'MACD Diff'] < 0) and (df.loc[index,'MACD Diff'] > 0) and (self.can_buy): # Buy means to decrease the account value
-                        account = self.buy(df, index, account, name, DATE, OPEN)
-
-                    elif (df.loc[index-1,'MACD Diff'] > 0) and (df.loc[index,'MACD Diff'] < 0) and ((not self.can_buy)): # Sell means to add to the account
-                        account = self.sell(df, index, account, name, DATE, OPEN)
-                            
-
-                self.update_final_history(name, account)
-                  
-        dic = dict(sorted(self.history.items(), key = lambda x: x[1]['Total P&L'], reverse=True)[:top_n])
-        if return_df:
-            return pd.DataFrame(dic).T.iloc[:,[-3,-2,-1,0,1,-5,2,3,4,-4]]
-        return dic
-
-
-    def RSI(self,buying_thresh:float = 30, selling_thresh:float = 70, min_days:int = 365, top_n:int = 10, nifty:str = 'nifty_50', cols = ('OPEN','CLOSE','LOW','HIGH', 'DATE'), window:int = 14, return_df:bool = True):
-        '''
-        Test RSI Stratedy. Buy next day when RSI goes below buying_threshold and sell next day when it goes above sell_threshold
-        Next: Test each Independent stock where it gives best self.history on different thresholds
-        args:
-            buying_thresh: Threshold to call a stock oversold. When stock goes below this value, buy
-            selling_thresh: Threshold to call a stock Overbought. When stock goes above this value, sell
-            min_days: Minimum no of days for a stock to be present at the stock market. Stock newer than these many Trading days will be discarded
-            top_n: How many self.historys to return
-            nifty: Nifty Index. Select from [nifty_50, nifty_200, nifty_500, all]
-            cols: Columns that contains the Open and Close price
-            window: Look back period to calculate the RSI
-
-        returns: A dictonary of top-n stocks which gave highest returns
-        '''
-        data = In.data['all_stocks'] if nifty == 'all' else In.data[nifty]
-        OPEN, CLOSE, LOW, HIGH, DATE = cols
-
-        for name in data:
-            df = In.open_downloaded_stock(name)
-            if df.shape[0] >= min_days: # Most stocks are atleast 407 days old on an average
-                
-                self.history_init(name)
-                self.history[name]['days'] = df.shape[0]
-                self.buys = 0
-                self.sells = 0
-                account = 0 # Initial account is 0.
-                self.can_buy = True
-                
-                df.sort_index(ascending=False, inplace = True) # Sort the dataframe
-
-                df = In.get_RSI(df,return_df = True)
-                df.dropna(inplace = True)
-                df.sort_index(ascending = False,inplace = True)
-                df.reset_index(inplace = True, drop = True)
-
-                for index in df.index[:-1]:
-                    if (df.loc[index,'RSI'] < buying_thresh) and (self.can_buy):
-                       account = self.buy(df, index, account, name, DATE, OPEN)
-
-                    elif (df.loc[index,'RSI'] > selling_thresh) and (not self.can_buy): # When self.can_buy is False, sell  is active so logic makes sense
-                        account = self.sell(df, index, account, name, DATE, OPEN)
-
-                self.update_final_history(name, account)
-
-        dic = dict(sorted(self.history.items(), key = lambda x: x[1]['Total P&L'], reverse=True)[:top_n])
-        if return_df:
-            return pd.DataFrame(dic).T.iloc[:,[-3,-2,-1,0,1,-5,2,3,4,-4]]
-        return dic
-
-
-    def CCI(self, buying_thresh:float = -100, selling_thresh:float = 100, min_days:int = 365, top_n:int = 10, nifty:str = 'nifty_50', cols = ('OPEN','CLOSE','LOW','HIGH', 'DATE'), window:int = 20, return_df:bool = True):
-        '''
-        Test CCI Stratedy. Buy next day when CCI comes above buying_threshold and sell next day when it goes below sell_threshold
-        Next: Test each Independent stock where it gives best self.history on different thresholds
-        args:
-            buying_thresh: Threshold to call a stock oversold. When stock goes above this value, buy
-            selling_thresh: Threshold to call a stock Overbought. When stock goes below this value, sell
+            strategy: Name of the strategy to backtest. See 'BackTest.strategies' for all available strageies 
             min_days: Minimum no of days for a stock to be present at the stock market. Stock newer than these many Trading days will be discarded
             top_n: How many self.historys to return
             nifty: Nifty Index. Select from [nifty_50, nifty_200, nifty_500, all]
@@ -203,9 +97,10 @@ class Backtest():
 
         returns: A dictonary of top-n stocks which gave highest returns
         '''
+        self.history = {}
         data = In.data['all_stocks'] if nifty == 'all' else In.data[nifty]
-        OPEN, CLOSE, LOW, HIGH, DATE = cols
-
+        buy_sell_logic = self.strategies[strategy]
+    
         for name in data:
             df = In.open_downloaded_stock(name)
             if df.shape[0] >= min_days: # Most stocks are atleast 407 days old on an average
@@ -214,26 +109,11 @@ class Backtest():
                 self.history[name]['days'] = df.shape[0]
                 self.buys = 0
                 self.sells = 0
-                account = 0 # Initial account is 0.
                 self.can_buy = True
                 
                 df.sort_index(ascending=False, inplace = True) # Sort the dataframe
 
-                df = In.get_CCI(df, window = window, names = cols, return_df = True)
-            
-                df.dropna(inplace = True)
-                df.sort_index(ascending = False,inplace = True)
-                df.reset_index(inplace = True, drop = True)
-
-                for index in df.index[1:-1]:
-                    if (df.loc[index-1,'CCI'] < buying_thresh) and (df.loc[index,'CCI'] > buying_thresh) and (self.can_buy):
-                        account = self.buy(df, index, account, name, DATE, OPEN)
-
-
-                    elif (df.loc[index-1,'CCI'] > selling_thresh) and (df.loc[index,'CCI'] < selling_thresh) and (not self.can_buy): # When self.can_buy is False, sell  is active so logic makes sense
-                        account = self.sell(df, index, account, name, DATE, OPEN)
-
-
+                account = buy_sell_logic(name, df, **kwargs) # Use buy Sell Logic
                 self.update_final_history(name, account)
 
 
@@ -241,3 +121,102 @@ class Backtest():
         if return_df:
             return pd.DataFrame(dic).T.iloc[:,[-3,-2,-1,0,1,-5,2,3,4,-4]] # Just fancy re arrangement
         return dic
+
+
+    def cci(self, name, df, buying_thresh:float = -100, selling_thresh:float = 100, window:int = 20, cols = ('OPEN','CLOSE','LOW','HIGH', 'DATE')):
+        '''
+        Test CCI Stratedy. Buy next day when CCI comes above buying_threshold and sell next day when it goes below sell_threshold
+        Next: Test each Independent stock where it gives best self.history on different thresholds
+        args:
+            name: Name of the stock
+            df: DataFrame of that Stock
+            buying_thresh: Threshold to call a stock oversold. When stock goes above this value, buy
+            selling_thresh: Threshold to call a stock Overbought. When stock goes below this value, sell
+            cols: Columns that contains the Open, close, low, high
+            window: Look back period to calculate the CCI
+            return_df: Whether to return the DataFrame
+
+        returns: A dictonary of top-n stocks which gave highest returns
+        '''
+        account = 0 # initially total P&L is 0, buying decreases the account and selling increases it
+        df = In.get_CCI(df, window = window, names = cols, return_df = True)
+        OPEN, CLOSE, LOW, HIGH, DATE = cols
+    
+        df.dropna(inplace = True)
+        df.sort_index(ascending = False,inplace = True)
+        df.reset_index(inplace = True, drop = True)
+
+        for index in df.index[1:-1]:
+            if (df.loc[index-1,'CCI'] < buying_thresh) and (df.loc[index,'CCI'] > buying_thresh) and (self.can_buy):
+                account = self.buy(df, index, account, name, DATE, OPEN)
+
+            elif (df.loc[index-1,'CCI'] > selling_thresh) and (df.loc[index,'CCI'] < selling_thresh) and (not self.can_buy): # When self.can_buy is False, sell is active so logic makes sense
+                account = self.sell(df, index, account, name, DATE, OPEN)
+
+        return account
+
+
+    def rsi(self,name, df, buying_thresh:float = 30, selling_thresh:float = 70, cols = ('OPEN','CLOSE','LOW','HIGH', 'DATE'), window:int = 14,):
+        '''
+        Test RSI Stratedy. Buy next day when RSI goes below buying_threshold and sell next day when it goes above sell_threshold
+        Next: Test each Independent stock where it gives best self.history on different thresholds
+        args:
+            name: Name of the stock
+            df: DataFrame of that Stock
+            buying_thresh: Threshold to call a stock oversold. When stock goes below this value, buy
+            selling_thresh: Threshold to call a stock Overbought. When stock goes above this value, sell
+            cols: Columns that contains the Open and Close price
+            window: Look back period to calculate the RSI
+
+        returns: A dictonary of top-n stocks which gave highest returns
+        '''
+        account = 0
+        OPEN, CLOSE, LOW, HIGH, DATE = cols
+
+        df = In.get_RSI(df,return_df = True)
+        df.dropna(inplace = True)
+        df.sort_index(ascending = False,inplace = True)
+        df.reset_index(inplace = True, drop = True)
+
+        for index in df.index[:-1]:
+            if (df.loc[index,'RSI'] < buying_thresh) and (self.can_buy):
+                account = self.buy(df, index, account, name, DATE, OPEN)
+
+            elif (df.loc[index,'RSI'] > selling_thresh) and (not self.can_buy): # When self.can_buy is False, sell  is active so logic makes sense
+                account = self.sell(df, index, account, name, DATE, OPEN)
+
+        return account
+
+
+    def macd(self,name, df, cols = ('OPEN','CLOSE','LOW','HIGH', 'DATE'), window_slow:int = 26, window_fast:int = 12, window_sign:int = 9):
+        '''
+        Test MACD Stratedy. Buy next day when MACD cuts Signal from below and Sell next day when MACD cuts Signal from above.
+        Next: Implement strategy to add constraint to reduce frequent Buy - Buy, Buy-Sell, Sell-Sell, Sell-Buy if it happens within "n" days in a volatile market
+        args:
+            name: Name of the stock
+            df: DataFrame of that Stock
+            cols: Columns that contains the Open and Close price
+            window_slow: Slowing line Period
+            window_fast: Fast Line Length Period
+            window_sign: Signal Line Period
+            
+        returns: A dictonary of top-n stocks which gave highest returns
+        '''
+        account = 0
+        OPEN, CLOSE, LOW, HIGH, DATE = cols
+      
+        df['MACD Diff'] = macd_diff(df[CLOSE], window_slow = window_slow, window_fast = window_fast, window_sign = window_sign) # Get MACD DIfference
+        
+        df.sort_index(ascending=False, inplace = True) # Sort Again from oldest to newest
+        df.dropna(inplace=True) # Drop the oldest ones
+        df.reset_index(inplace=True,drop=True)
+
+        for index in df.index[1:-1]:
+            if (df.loc[index-1,'MACD Diff'] < 0) and (df.loc[index,'MACD Diff'] > 0) and (self.can_buy): # Buy means to decrease the account value
+                account = self.buy(df, index, account, name, DATE, OPEN)
+
+            elif (df.loc[index-1,'MACD Diff'] > 0) and (df.loc[index,'MACD Diff'] < 0) and ((not self.can_buy)): # Sell means to add to the account
+                account = self.sell(df, index, account, name, DATE, OPEN)
+                            
+        return account
+
