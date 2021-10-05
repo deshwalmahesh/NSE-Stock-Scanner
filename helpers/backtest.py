@@ -1,3 +1,5 @@
+from datetime import datetime, time
+from os import PRIO_PROCESS
 from .investing import Investing
 from ta.trend import macd_diff
 import pandas as pd
@@ -11,7 +13,7 @@ class Backtest():
     def __init__(self):
         '''
         '''
-        self.strategies = {'cci':self.cci, 'macd':self.macd, 'rsi': self.rsi}
+        self.strategies = {'cci':self.cci, 'macd':self.macd, 'rsi': self.rsi,'ma':self.ma}
 
 
     def history_init(self, name):
@@ -27,79 +29,85 @@ class Backtest():
         self.history[name]['hold_period'] = []
 
     
-    def buy(self, df, index:int, account:float, name:str, DATE:str, OPEN:str):
+    def buy(self, name:str, date:datetime, price:float):
         '''
         Buying Logic. Changes PArameters and return final account value
         args: 
-            df: DataFrame to look into
-            index: Current index
-            DATE: Date Column
-            OPEN: Name of Open Column
-            account: Current account value
             name: Symbol of the stock
+            date: date of buying
+            price: Buying Price
         '''
-        self.history[name]['buy_date'].append(df.loc[index+1, DATE])
-        self.history[name]['buy_price'].append(df.loc[index+1,OPEN])
+        self.history[name]['buy_date'].append(date)
+        self.history[name]['buy_price'].append(price)
 
-        account -= df.loc[index+1,OPEN]
         self.buys += 1
-        self.can_buy = False # A user can sell only if a buy has been made. So if there is a seel signal for the first trade, skip it
-        return account
+        self.can_buy = False # A user can sell only if a buy has been made. So if there is a sell signal for the first trade, skip it
 
 
-    def sell(self, df, index:int, account:float, name:str, DATE:str, OPEN:str):
+    def sell(self, name:str, date:datetime, price: float):
         '''
         Selling Logic. Changes Parameters and return final account value
         args: 
-            df: DataFrame to look into
-            index: Current index
-            DATE: Date Column
-            OPEN: Name of Open Column
-            account: Current account value
             name: SYMBOL of the Stock
+            date: date of selling
+            price: Selling Price
         '''
-        self.history[name]['sell_date'].append(df.loc[index+1, DATE])
-        self.history[name]['sell_price'].append(df.loc[index+1,OPEN])
+        self.history[name]['sell_date'].append(date)
+        self.history[name]['sell_price'].append(price)
 
         self.history[name]['p&l'].append(self.history[name]['sell_price'][-1] - self.history[name]['buy_price'][-1])
         self.history[name]['hold_period'].append((self.history[name]['sell_date'][-1] - self.history[name]['buy_date'][-1]).days)
 
-        account += df.loc[index+1,OPEN]
         self.sells += 1
         self.can_buy = True
 
-        return account
-
     
-    def update_final_history(self, name:str, account:int):
+    def update_final_history(self, name:str,):
         '''
         Update final history per dataframe
         args:
             name: name of the stock
-            account: Final account balance
         '''
-        self.history[name]['Total P&L'] = round(account,2)
         self.history[name]['buys'] = self.buys # No of Buying opportunities
         self.history[name]['sells'] = self.sells # ideally No of self.buys == self.sells or self.buys = self.sells + 1
 
+    
+    def get_ROI(self, row):
+        '''
+        Calculate Return on Investment. (Total Profit/ Total Investment) * 100 %
+        '''
+        if row['sells'] == row['buys']:
+            investment = sum(row['buy_price'])
 
-    def backtest(self, strategy:str, min_days:int = 365, top_n:int = 10, nifty:str = 'nifty_50', return_df:bool = True, **kwargs):
+        elif row['buys'] == row['sells'] + 1:
+            investment = sum(row['buy_price'][:-1])
+        
+        return round((sum(row['p&l']) / investment) *100, 2)
+
+
+    def backtest(self, strategy:str, min_days:int = 365, top_n:int = 10, stocks:str = 'nifty_50', return_df:bool = True, **kwargs):
         '''
         Test the strategies based on the given Buy and Sell Criteria
         args:
             strategy: Name of the strategy to backtest. See 'BackTest.strategies' for all available strageies 
             min_days: Minimum no of days for a stock to be present at the stock market. Stock newer than these many Trading days will be discarded
-            top_n: How many self.historys to return
-            nifty: Nifty Index. Select from [nifty_50, nifty_200, nifty_500, all]
+            top_n: How many top values to return. Number between 1-1886 or 'all'
+            stocks: Select from [nifty_50, nifty_200, nifty_500, all] or a list of stocks to choose from such as ["INFY","SBIN"] or ["HDFC"]
             cols: Columns that contains the Open, close, low, high
             window: Look back period to calculate the CCI
             return_df: Whether to return the DataFrame
 
-        returns: A dictonary of top-n stocks which gave highest returns
+        returns: A dictonary of top-n stocks which gave highest win%
         '''
-        self.history = {}
-        data = In.data['all_stocks'] if nifty == 'all' else In.data[nifty]
         buy_sell_logic = self.strategies[strategy]
+        self.history = {}
+
+        if isinstance(stocks,str):
+            data = In.data['all_stocks'] if stocks == 'all' else In.data[stocks]
+        else: data = stocks
+
+        top_n = top_n if isinstance(top_n,int) else len(data)
+
     
         for name in data:
             df = In.open_downloaded_stock(name)
@@ -113,14 +121,21 @@ class Backtest():
                 
                 df.sort_index(ascending=False, inplace = True) # Sort the dataframe
 
-                account = buy_sell_logic(name, df, **kwargs) # Use buy Sell Logic
-                self.update_final_history(name, account)
+                buy_sell_logic(name, df, **kwargs) # Use buy Sell Logic
+                self.update_final_history(name)
 
 
-        dic = dict(sorted(self.history.items(), key = lambda x: x[1]['Total P&L'], reverse=True)[:top_n])
-        if return_df:
-            return pd.DataFrame(dic).T.iloc[:,[-3,-2,-1,0,1,-5,2,3,4,-4]] # Just fancy re arrangement
-        return dic
+        x = pd.DataFrame(self.history).T
+        x = x.loc[x['sells']>0,:] # No need for those where no sell has been made. Won't be able to produce any win%. Division by Zero error
+        # x['Total P&L'] = x['p&l'].apply(lambda x: sum(x))
+        x['ROI'] = x.apply(lambda row: self.get_ROI(row),axis=1)
+        x['wins'] = x['p&l'].apply(lambda x: sum([True if i >0 else False for i in x]))
+        x['losses'] = x.apply(lambda row: row['sells'] - row['wins'],axis=1)
+        x['win%'] = x.apply(lambda row: round((row['wins'] - row['losses'])/row['sells'],2),axis=1)
+        
+
+        x.sort_values(['win%','wins','ROI'],ascending=False, inplace=True) # 3 priorities of sorting in case of conflict
+        return x.iloc[:top_n,[-1,-3,-2,-4,4,0,1,2,3,5,7,8,6]] # just shuffling of columns on "first thing first" basis
 
 
     def cci(self, name, df, buying_thresh:float = -100, selling_thresh:float = 100, window:int = 20, cols = ('OPEN','CLOSE','LOW','HIGH', 'DATE')):
@@ -138,7 +153,6 @@ class Backtest():
 
         returns: A dictonary of top-n stocks which gave highest returns
         '''
-        account = 0 # initially total P&L is 0, buying decreases the account and selling increases it
         df = In.get_CCI(df, window = window, names = cols, return_df = True)
         OPEN, CLOSE, LOW, HIGH, DATE = cols
     
@@ -148,12 +162,11 @@ class Backtest():
 
         for index in df.index[1:-1]:
             if (df.loc[index-1,'CCI'] < buying_thresh) and (df.loc[index,'CCI'] > buying_thresh) and (self.can_buy):
-                account = self.buy(df, index, account, name, DATE, OPEN)
+                self.buy(name, date = df.loc[index+1, DATE], price = df.loc[index+1,OPEN])
 
             elif (df.loc[index-1,'CCI'] > selling_thresh) and (df.loc[index,'CCI'] < selling_thresh) and (not self.can_buy): # When self.can_buy is False, sell is active so logic makes sense
-                account = self.sell(df, index, account, name, DATE, OPEN)
+                self.sell(name, date = df.loc[index+1, DATE], price = df.loc[index+1,OPEN])
 
-        return account
 
 
     def rsi(self,name, df, buying_thresh:float = 30, selling_thresh:float = 70, cols = ('OPEN','CLOSE','LOW','HIGH', 'DATE'), window:int = 14,):
@@ -170,7 +183,6 @@ class Backtest():
 
         returns: A dictonary of top-n stocks which gave highest returns
         '''
-        account = 0
         OPEN, CLOSE, LOW, HIGH, DATE = cols
 
         df = In.get_RSI(df,return_df = True)
@@ -180,12 +192,10 @@ class Backtest():
 
         for index in df.index[:-1]:
             if (df.loc[index,'RSI'] < buying_thresh) and (self.can_buy):
-                account = self.buy(df, index, account, name, DATE, OPEN)
+                self.buy(name, date = df.loc[index+1, DATE], price = df.loc[index+1,OPEN])
 
             elif (df.loc[index,'RSI'] > selling_thresh) and (not self.can_buy): # When self.can_buy is False, sell  is active so logic makes sense
-                account = self.sell(df, index, account, name, DATE, OPEN)
-
-        return account
+                self.sell(name, date = df.loc[index+1, DATE], price = df.loc[index+1,OPEN])
 
 
     def macd(self,name, df, cols = ('OPEN','CLOSE','LOW','HIGH', 'DATE'), window_slow:int = 26, window_fast:int = 12, window_sign:int = 9):
@@ -202,7 +212,6 @@ class Backtest():
             
         returns: A dictonary of top-n stocks which gave highest returns
         '''
-        account = 0
         OPEN, CLOSE, LOW, HIGH, DATE = cols
       
         df['MACD Diff'] = macd_diff(df[CLOSE], window_slow = window_slow, window_fast = window_fast, window_sign = window_sign) # Get MACD DIfference
@@ -211,12 +220,62 @@ class Backtest():
         df.dropna(inplace=True) # Drop the oldest ones
         df.reset_index(inplace=True,drop=True)
 
-        for index in df.index[1:-1]:
+        for index in df.index[1:-1]: # Has to consider Past and Future candle  so [1:-1] 
             if (df.loc[index-1,'MACD Diff'] < 0) and (df.loc[index,'MACD Diff'] > 0) and (self.can_buy): # Buy means to decrease the account value
-                account = self.buy(df, index, account, name, DATE, OPEN)
+                self.buy(name, date = df.loc[index+1, DATE], price = df.loc[index+1,OPEN])
 
             elif (df.loc[index-1,'MACD Diff'] > 0) and (df.loc[index,'MACD Diff'] < 0) and ((not self.can_buy)): # Sell means to add to the account
-                account = self.sell(df, index, account, name, DATE, OPEN)
-                            
-        return account
+                self.sell(name, date = df.loc[index+1, DATE], price = df.loc[index+1,OPEN])
+  
+
+    
+    def ma(self, name, df, cols:tuple = ('OPEN','CLOSE','LOW','HIGH', 'DATE'), ma_type:str='simple', window:int = 44, diff:float = 0.015, r2r:float = 1.99):
+        '''
+        Backtest Moving Average Strategy. Buy next day when recent Candle is Green, taking support on Moving Average Line, above 200 MA, RSI less than 70
+        args:
+            name: Name of the stock
+            df: DataFrame of that Stock
+            cols: Columns that contains the Open and Close price
+            ma_type: "simple" or "ema"
+            window: Length of the window
+            diff: Difference % between the MA line and candle. 0.01 means 1%
+            r2r: Risk to Reward Ratio 1:2 means if the risk is of 1 rupee, then exit only after gaining 2rupees
+        '''
+        OPEN, CLOSE, LOW, HIGH, DATE = cols
+        simple = True if ma_type == 'simple' else False
+
+        df = In.get_MA(df, window = window, names = (OPEN, CLOSE, LOW, HIGH), simple = simple, return_df = True)
+        df = In.get_MA(df, window = 200, names = (OPEN, CLOSE, LOW, HIGH), simple = simple, return_df = True)
+        df = In.get_RSI(df, Close = CLOSE, return_df = True)
+
+        df.sort_index(ascending=False, inplace = True) # Sort Again from oldest to newest
+        df.dropna(inplace=True) # Drop the oldest ones
+        df.reset_index(inplace=True,drop=True)
+
+
+        for index in df.index[1:-1]: # start from second entry because we have to consider that -> stop loss is lowest of current OR current
+            if (df.loc[index,CLOSE] > df.loc[index,OPEN]) and (df.loc[index,CLOSE] > df.loc[index,f"{window}-MA"]) and \
+            (df.loc[index,CLOSE] > df.loc[index,"200-MA"]) and (df.loc[index,'RSI'] < 70) and \
+            (min(abs(df.loc[index,OPEN] - df.loc[index,f"{window}-MA"]), abs(df.loc[index,LOW] - df.loc[index,f"{window}-MA"])) < (df.loc[index,CLOSE] * diff)):
+
+                if (self.can_buy) and (df.loc[index+1,HIGH] > df.loc[index,HIGH]):
+                    
+                    buying_price = df.loc[index,HIGH]
+                    self.buy(name, date = df.loc[index+1, DATE], price = buying_price)
+                    stop_loss = min(df.loc[index, LOW], df.loc[index-1, LOW]) # stop loss is minimum of low of current or previous candle
+                    target_price = buying_price + (r2r * (buying_price - stop_loss))
+
+            if (not self.can_buy):  
+                if df.loc[index, HIGH] > target_price:
+                     selling_price = target_price
+                     
+                elif df.loc[index, LOW] < stop_loss:
+                    selling_price  = stop_loss
+                
+                else: selling_price = None
+
+                if selling_price: # if the stock reaches either the target or hits stop loss
+                    self.sell(name, date = df.loc[index, DATE], price = selling_price)
+
+
 
