@@ -13,7 +13,7 @@ class IntraDay():
     Class for Intraday Screening of stocks
     '''
     
-    def whole_number_strategy(self,nifty:int=50, min_val:int=100, max_val:int=5000, return_list = False):
+    def whole_number_strategy(self,nifty:int=50, min_val:int=100, max_val:int=5000, return_list = False, print_results:bool = True):
         '''
         If Open == High or Low for a stock around 9:30, go long if Open == Low else go high only after 9:30 on 15 minutes candle
         args:
@@ -21,6 +21,7 @@ class IntraDay():
             min_val: Minimum value to consider
             return_list: Whether to return list or Dictonary
             max_val: Maximum value of stock price to consider
+            print_results: Whether to print the results or not
         returns:
             Dictonary of tuples {"Long":[(name, Open, nifty Index), ...], "Short":[(name, Open, nifty Index), ...]}
         '''
@@ -43,15 +44,29 @@ class IntraDay():
                 low =  df.loc[index,'dayLow']
                 ltp = df.loc[index,'lastPrice']
                 name = df.loc[index,'symbol']
+                stock = In.open_downloaded_stock(name)
+                atr = round(In.get_ATR(stock),2)
                 
-                minus = low - open_ if open_ == high else high - open_
-                change = str(round((minus/open_)*100, 2))+'%'
+                minus = low - open_ if open_ == high else high - open_ # current change that has already been done
+                minus = abs(round(minus,2))
+
+                change_perc = str(round((minus/open_)*100, 2))+'%'
+
+                remaining_move = round((minus - atr) / atr,2)
                 
                 lis.append(name)
-                result['Long'].append((name,change,In.get_index(name))) if open_ == low else result['Short'].append((name,change,In.get_index(name)))
+                result['Long'].append((name,minus,atr,change_perc, remaining_move, In.get_index(name))) if open_ == low else result['Short'].append((name,minus,atr,change_perc,remaining_move,In.get_index(name)))
+        
+        if print_results:
+            for key in result.keys():
+                print(key,":\n","Name - Change - ATR - Change% - Remaining Move - Index:\n")
+                for r in sorted(result[key],key=lambda x: x[-2]):
+                    print(r,'\n')
+            return None
                 
         if return_list:
             return lis
+
         return result
 
 

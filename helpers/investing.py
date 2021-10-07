@@ -88,6 +88,7 @@ class Investing(AnalyseStocks):
         near_52 = []
         macd_signal = []
         cci_value = []
+        adx = []
         
         for key in keys:
             try:
@@ -108,6 +109,7 @@ class Investing(AnalyseStocks):
                 near_52.append(self.near_52(df))
                 macd_signal.append(self.macd_signal(df))
                 cci_value.append(self.get_CCI(df,signal_only=False, return_df=False))
+                adx.append(self.get_ADX(df))
                 
                 
         columns = df.columns
@@ -118,6 +120,7 @@ class Investing(AnalyseStocks):
         df['CCI Value'] = cci_value
         df['RSI Value'] = rsi
         df['MACD Signal'] = macd_signal
+        df['ADX'] = adx
         df['Direction'] = near_52
         df['Ichi'] = df['SYMBOL'].apply(lambda x: ichi[x] if ichi.get(x) else 0)
         

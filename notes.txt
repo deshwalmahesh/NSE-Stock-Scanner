@@ -40,3 +40,5 @@ ________________________________________________________________________________
 
 
 Do not buy when Stock is near the upper band of a channel as it is over extended already.
+
+TRIX and Stochastic RSI tend to support shorter time frame better

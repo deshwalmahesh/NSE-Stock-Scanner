@@ -229,10 +229,10 @@ class AnalyseStocks(DataHandler):
             return df
         
         if signal_only:
-            if df.iloc[0,-1] > 70:
+            if (df.iloc[0,-1] > 80) or ((df.iloc[0,-1] < 70) and (df.iloc[1,-1] > 70)):# Coming up from above
                 signal = "Sell"
             
-            elif df.iloc[0,-1] < 30:
+            elif (df.iloc[0,-1] > 30) and (df.iloc[1,-1] < 30): # Cutting RSI from below
                 signal = "Buy"
 
             else: signal = "No Signal"

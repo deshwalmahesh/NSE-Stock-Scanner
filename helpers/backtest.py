@@ -72,7 +72,7 @@ class Backtest():
         self.history[name]['sells'] = self.sells # ideally No of self.buys == self.sells or self.buys = self.sells + 1
 
     
-    def get_ROI(self, row):
+    def calculate_ROI(self, row):
         '''
         Calculate Return on Investment. (Total Profit/ Total Investment) * 100 %
         '''
@@ -83,6 +83,20 @@ class Backtest():
             investment = sum(row['buy_price'][:-1])
         
         return round((sum(row['p&l']) / investment) *100, 2)
+
+        # which one is right formula ?
+
+        # if row['sells'] == row['buys']:
+        #     investment = row['buy_price']
+
+        # elif row['buys'] == row['sells'] + 1:
+        #     investment = row['buy_price'][:-1]
+
+        # result = 0
+        # for i in range(len(investment)):
+        #     result += ((row['p&l'][i]) / investment[i]) * 100
+
+        # return round(result/len(investment), 2)
 
 
     def backtest(self, strategy:str, min_days:int = 365, top_n:int = 10, stocks:str = 'nifty_50', return_df:bool = True, **kwargs):
@@ -128,7 +142,7 @@ class Backtest():
         x = pd.DataFrame(self.history).T
         x = x.loc[x['sells']>0,:] # No need for those where no sell has been made. Won't be able to produce any win%. Division by Zero error
         # x['Total P&L'] = x['p&l'].apply(lambda x: sum(x))
-        x['ROI'] = x.apply(lambda row: self.get_ROI(row),axis=1)
+        x['ROI'] = x.apply(lambda row: self.calculate_ROI(row),axis=1)
         x['wins'] = x['p&l'].apply(lambda x: sum([True if i >0 else False for i in x]))
         x['losses'] = x.apply(lambda row: row['sells'] - row['wins'],axis=1)
         x['win%'] = x.apply(lambda row: round((row['wins'] - row['losses'])/row['sells'],2),axis=1)
@@ -149,29 +163,40 @@ class Backtest():
             selling_thresh: Threshold to call a stock Overbought. When stock goes below this value, sell
             cols: Columns that contains the Open, close, low, high
             window: Look back period to calculate the CCI
-            return_df: Whether to return the DataFrame
 
         returns: A dictonary of top-n stocks which gave highest returns
         '''
-        df = In.get_CCI(df, window = window, names = cols, return_df = True)
         OPEN, CLOSE, LOW, HIGH, DATE = cols
+
+        df = In.get_MA(df, window = 50, names = (OPEN, CLOSE, LOW, HIGH), return_df = True)
+        df = In.get_MA(df, window = 200, names = (OPEN, CLOSE, LOW, HIGH), return_df = True)
+
+        df = In.get_CCI(df, window = window, names = cols, return_df = True)
+        
     
         df.dropna(inplace = True)
         df.sort_index(ascending = False,inplace = True)
         df.reset_index(inplace = True, drop = True)
 
         for index in df.index[1:-1]:
-            if (df.loc[index-1,'CCI'] < buying_thresh) and (df.loc[index,'CCI'] > buying_thresh) and (self.can_buy):
-                self.buy(name, date = df.loc[index+1, DATE], price = df.loc[index+1,OPEN])
+            if (df.loc[index-1,'CCI'] < buying_thresh) and (df.loc[index,'CCI'] > buying_thresh) and (self.can_buy) and \
+                (df.loc[index, CLOSE] > df.loc[index,'50-MA']) and (df.loc[index, CLOSE] > df.loc[index,'200-MA']):
 
-            elif (df.loc[index-1,'CCI'] > selling_thresh) and (df.loc[index,'CCI'] < selling_thresh) and (not self.can_buy): # When self.can_buy is False, sell is active so logic makes sense
-                self.sell(name, date = df.loc[index+1, DATE], price = df.loc[index+1,OPEN])
+                self.buy(name, date = df.loc[index+1, DATE], price = df.loc[index+1,OPEN])
+                
+
+            elif (not self.can_buy):
+                if ((df.loc[index-1,'CCI'] > selling_thresh) and (df.loc[index,'CCI'] < selling_thresh) or (df.loc[index,'CCI'] > 200)):
+                    selling_price = df.loc[index+1,OPEN]
+
+                    self.sell(name, date = df.loc[index+1, DATE], price = selling_price)
 
 
 
     def rsi(self,name, df, buying_thresh:float = 30, selling_thresh:float = 70, cols = ('OPEN','CLOSE','LOW','HIGH', 'DATE'), window:int = 14,):
         '''
-        Test RSI Stratedy. Buy next day when RSI goes below buying_threshold and sell next day when it goes above sell_threshold
+        Test RSI Stratedy. Buy next day when RSI comes above buying thresh from the below and sell next day when it goes above 80 comes down from above 70.
+        Condition is when the stock is trading above 200-MA
         Next: Test each Independent stock where it gives best self.history on different thresholds
         args:
             name: Name of the stock
@@ -185,17 +210,27 @@ class Backtest():
         '''
         OPEN, CLOSE, LOW, HIGH, DATE = cols
 
+        df = In.get_MA(df, window = 200, names = (OPEN, CLOSE, LOW, HIGH), return_df = True)
+
         df = In.get_RSI(df,return_df = True)
+
         df.dropna(inplace = True)
         df.sort_index(ascending = False,inplace = True)
         df.reset_index(inplace = True, drop = True)
 
-        for index in df.index[:-1]:
-            if (df.loc[index,'RSI'] < buying_thresh) and (self.can_buy):
-                self.buy(name, date = df.loc[index+1, DATE], price = df.loc[index+1,OPEN])
 
-            elif (df.loc[index,'RSI'] > selling_thresh) and (not self.can_buy): # When self.can_buy is False, sell  is active so logic makes sense
-                self.sell(name, date = df.loc[index+1, DATE], price = df.loc[index+1,OPEN])
+        for index in df.index[1:-1]:
+            if (df.loc[index-1,'RSI'] < buying_thresh) and (df.loc[index,'RSI'] > buying_thresh) and (self.can_buy) and \
+                (df.loc[index, CLOSE] > df.loc[index,'200-MA']):
+
+                self.buy(name, date = df.loc[index+1, DATE], price = df.loc[index+1,OPEN])
+                
+
+            elif (not self.can_buy):
+                if ((df.loc[index-1,'RSI'] > selling_thresh) and (df.loc[index,'RSI'] < selling_thresh) or (df.loc[index,'RSI'] > 80)):
+                    selling_price = df.loc[index+1,OPEN]
+
+                    self.sell(name, date = df.loc[index+1, DATE], price = selling_price)
 
 
     def macd(self,name, df, cols = ('OPEN','CLOSE','LOW','HIGH', 'DATE'), window_slow:int = 26, window_fast:int = 12, window_sign:int = 9):
@@ -265,13 +300,16 @@ class Backtest():
                     stop_loss = min(df.loc[index, LOW], df.loc[index-1, LOW]) # stop loss is minimum of low of current or previous candle
                     target_price = buying_price + (r2r * (buying_price - stop_loss))
 
-            if (not self.can_buy):  
+            elif (not self.can_buy):  
                 if df.loc[index, HIGH] > target_price:
                      selling_price = target_price
                      
                 elif df.loc[index, LOW] < stop_loss:
                     selling_price  = stop_loss
-                
+
+                elif df.loc[index, HIGH] > buying_price + (buying_price * 0.10): # if we get 10% on investment
+                    selling_price = buying_price + (buying_price * 0.10)
+                    
                 else: selling_price = None
 
                 if selling_price: # if the stock reaches either the target or hits stop loss
