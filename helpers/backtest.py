@@ -316,4 +316,59 @@ class Backtest():
                     self.sell(name, date = df.loc[index, DATE], price = selling_price)
 
 
+    def Stochastic_Osc(self,name, df, k_period:int = 14, d_period:int = 3, smooth_k = 3, buying_thresh:int = 20, selling_thresh:int =  80, cols = ('OPEN','CLOSE','LOW','HIGH', 'DATE')):
+        '''
+        Test Stochastic Oscillator Strategy: Different from Stochastic RSI
+        1. Buy when the fast line cuts the slow line from below in an OVERSOLD zone (below 30). Wait for both lines to go above Oversold and then buy
+        2. Sell when both lines reaches Overbought region (above 70) and fast line crosses slow from above
+        
+        https://www.elearnmarkets.com/blog/stochastic-indicator/
 
+        args:
+            name: Name of the stock
+            df: DataFrame of that Stock
+            k_period: Period for the %K /Fast / Blue line
+            d_period: Period for the %D / Slow /Red / Signal Line
+            smooth_k: Smoothening the Fast line value. With increase/ decrease in number, it becomes the Fast or Slow Stochastic
+            buying_thresh: Threshold for defining Oversold Zone
+            selling_thresh: Value for defining Overbought Zone
+            cols: Names of the columns which contains the corresponding values
+            
+        returns: A dictonary of top-n stocks which gave highest returns
+        '''
+        def get_lock(df, index):
+            '''
+            Get the Buying or Selling Lock. Stochastic tend to move fast so everytime Blue Crosses the red from below, buy lock will be activated and the moment
+            it'll cut again from below, it'll be deactivated
+            '''
+            if (df.loc[index,'Diff'] < 0) and (df.loc[index-1,'Diff'] > 0) and \
+                (df.loc[index,'Blue Line'] < buying_thresh) and (df.loc[index,'Red Line'] < buying_thresh):
+                buy_lock = True
+                sell_lock = False
+            
+            elif (df.loc[index,'Blue Line'] < df.loc[index,'Red Line']) and (df.loc[index-1,'Blue Line'] > df.loc[index-1,'Red Line']) and \
+                 (df.loc[index,'Blue Line'] > buying_thresh) and (df.loc[index,'Red Line'] > buying_thresh):
+                buy_lock = False
+                sell_lock = True
+            
+
+
+
+
+        OPEN, CLOSE, LOW, HIGH, DATE = cols
+      
+        df = In.get_MA(df, window = 200, names = (OPEN, CLOSE, LOW, HIGH), return_df = True) # Buy Only Over 200-MA Closing
+        df = In.Stochastic(df, k_period, d_period, smooth_k, names=(OPEN, CLOSE, LOW, HIGH), return_df=True) # Get Values of Stochastic Blue and Red Line
+        df['Diff'] = df['Red Line'] - df['Blue Line']
+        
+        df.sort_index(ascending=False, inplace = True) # Sort Again from oldest to newest
+        df.dropna(inplace=True) # Drop the oldest ones which are NaN-s
+        df.reset_index(inplace=True,drop=True)
+
+        for index in df.index[1:-1]: # Has to consider Past and Future candle  so [1:-1]
+
+            if (df.loc[index-1,'MACD Diff'] < 0) and (df.loc[index,'MACD Diff'] > 0) and (self.can_buy): # Buy means to decrease the account value
+                self.buy(name, date = df.loc[index+1, DATE], price = df.loc[index+1,OPEN])
+
+            elif (df.loc[index-1,'MACD Diff'] > 0) and (df.loc[index,'MACD Diff'] < 0) and ((not self.can_buy)): # Sell means to add to the account
+                self.sell(name, date = df.loc[index+1, DATE], price = df.loc[index+1,OPEN])

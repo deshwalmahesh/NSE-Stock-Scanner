@@ -338,12 +338,12 @@ class AnalyseStocks(DataHandler):
         return round(df.iloc[-1,-1],2) # Return the absolute value
 
 
-    def get_ADX(self,data, interval:int = 14, names:tuple = ('OPEN','CLOSE','LOW','HIGH'), return_df:bool=False, return_adx_only:bool = True):
+    def get_ADX(self,data, window:int = 14, names:tuple = ('OPEN','CLOSE','LOW','HIGH'), return_df:bool=False, return_adx_only:bool = True):
         '''
         Get the Value of Average Directional Index 
         args
             df: DataFrame of stocks
-            interval: Rolling window or the period you want to consider
+            window: Rolling window or the period you want to consider
             names: Column names showing ('OPEN','CLOSE','LOW','HIGH') in the same order
             return_df: Whether to return the whoe DataFrame or the Recent Value
             return_adx_only: Return only the Average value. Esle it returns all of Negative, Positive, Average
@@ -353,7 +353,7 @@ class AnalyseStocks(DataHandler):
         if df.iloc[0,0] > df.iloc[1,0]: # if the first Date entry [0,0] is > previous data entry [1,0] then it is in descending order, then reverse it for calculation
             df.sort_index(ascending=False, inplace = True)
 
-        adx = ADXIndicator(df[High], df[Low], df[Close])
+        adx = ADXIndicator(df[High], df[Low], df[Close], window = window)
 
         df['-DM'] = adx.adx_neg()
         df['+DM'] = adx.adx_pos()
@@ -362,10 +362,55 @@ class AnalyseStocks(DataHandler):
         df.sort_index(ascending = True, inplace = True)
         if return_df:
             return df
+
         if return_adx_only:
             return df.iloc[0,-1]
-        return df.iloc[0,-3:] # Negative, Positive, ADX
 
+        return df.iloc[0,-3:].values # Negative, Positive, ADX
+
+
+    def Stochastic(self, data, k_period:int = 14, d_period:int = 3, smooth_k = 3, names:tuple = ('OPEN','CLOSE','LOW','HIGH'),return_df:bool=False):
+        '''
+        Implementation of the Stochastic Oscillator. Returns the Fast and Slow lines values or the whole DataFrame
+        args:
+            data: Pandas Dataframe of the stock
+            k_period: Period for the %K /Fast / Blue line
+            d_period: Period for the %D / Slow /Red / Signal Line
+            smooth_k: Smoothening the Fast line value. With increase/ decrease in number, it becomes the Fast or Slow Stochastic
+            names: Names of the columns which contains the corresponding values
+            return_df: Whether to return the DataFrame or the Values
+        out:
+            Returns either the Array containing (fast_line,slow_line) values or the entire DataFrame
+        '''
+        OPEN, CLOSE, LOW, HIGH = names
+        df = data.copy()
+        if df.iloc[0,0] > df.iloc[1,0]: # if the first Date entry [0,0] is > previous data entry [1,0] then it is in descending order, then reverse it for calculation
+            df.sort_index(ascending=False, inplace = True)
+
+        # Adds a "n_high" column with max value of previous 14 periods
+        df['n_high'] = df[HIGH].rolling(k_period).max()
+
+        # Adds an "n_low" column with min value of previous 14 periods
+        df['n_low'] = df[LOW].rolling(k_period).min()
+
+        # Uses the min/max values to calculate the %k (as a percentage)
+        df['Blue Line'] = (df[CLOSE] - df['n_low']) * 100 / (df['n_high'] - df['n_low']) # %K or so called Fast Line
+
+        if smooth_k > 1: # Smoothen the Fast, Blue line
+            df['Blue Line'] = df['Blue Line'].rolling(smooth_k).mean()
+        
+        # Uses the %k to calculates a SMA over the past 3 values of %k
+        df['Red Line'] = df['Blue Line'].rolling(d_period).mean() # %D of so called Slow Line
+
+        df.drop(['n_high','n_low'],inplace=True,axis=1)
+
+        df.sort_index(ascending = True, inplace = True)
+
+        if return_df:
+            return df
+
+        return df.iloc[0,-2:].values # Return the Recent Values
+    
 
     def _recent_info(self, stock , mvs = [20,50,100,200], names:tuple = ('OPEN','CLOSE','LOW','HIGH')):
         '''
