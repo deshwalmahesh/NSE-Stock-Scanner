@@ -1,5 +1,5 @@
 # Disclaimer:
-STOCK MARKET IS VERY RISKY UNTIL YOU DO IT PROPERLY. PLEASE DO NOT TAKE TRADES JUST BECAUSE THIS TOOL GIVES YOU THE NAME. APPLY YOUR OWN LEARNINGS, CREATE YOUR OWN STRATEGY, ASSESS RISK & TRADE THE PLAN.
+STOCK MARKET IS VERY RISKY UNTIL YOU DO IT PROPERLY. PLEASE DO NOT TAKE TRADES JUST BECAUSE THIS TOOL GIVES YOU THE NAME. APPLY YOUR OWN LEARNINGS, CREATE YOUR OWN STRATEGY, ASSESS RISK & TRADE THE PLAN. No will be held responsible for your losses except you.
 
 ```diff
 -Trade at you own risk as No one will be held responsible for the losses incurred exept the trader.
@@ -20,6 +20,7 @@ Now Supports Live market data too (Not tick by tick but in an interval as it is 
 
 _______________________________________________________________
 ## Usage Steps: 
+
 1. **Download and Install** [Python 3.7 and above](https://www.python.org/downloads/)
 2.  Open Terminal ( For Linux) or Command Prompt or Git Shell in Windows
 3. Run the following Commands:
@@ -30,8 +31,13 @@ pip install -r requirements.txt
 jupyter lab
 ```
 4. Open `Tutorial.ipynb` in your browser for Documentation and usage
+5. Go to first cell (just below *Imports, Defaults and Initializations* where some code is written) and press `Shit + Enter`.
+6. To run any cell, just do the same. [Read the commands here if you need help in running it](https://www.tutorialspoint.com/jupyter/jupyter_notebook_editing.htm)
 
 For usage, see the docstring of code or the example ipython Notebook `Test.ipynb`
+
+*NOTE: There is some bug in fetching live data so if you are not ubale to get some data, restart kernal and run cells again.*
+
 
 **Please share your ideas, views, requirements, knowledge, bug reports, fixes and most importantly; reviews.**
 
@@ -56,16 +62,20 @@ ________________________________________________________________________________
 Supports:
 1. Auto risk management: Entry ( Default is buy above above High and Stop-loss Below the lower of current close or prev close; can also be overridden), Target (default is based on 1:2), Expected Change (how much change you are expecting from it to give you a realistic measure)
 2. Risk Control and Management: (Whether you should buy the stocks or not based on your risk apetite and budget, it suggests you stocks)
-3. Ichimoku Suggestion (Count out of 3 conditions: Lines Crossing or not, Chikou Lagging inside Prices or Not, Cloud Below the Price or Not)
-4. Moving Average Support (Whether Price is on the Above Side of Moving Average or not)
-5. Bollinger Bands (2 STD Positive and Negative Bollinger Band Support)
-6. RSI Value ( Relative Strength Index)
-7. ATR Value (Average True Range)
-8. ADX (Directional Index to give you idea about momentum)
-9. Stock Movement: Rising or Falling ( `x%` (Default is 5%) near 52 Week high or Low. 
-10. Journal Analysis: Fetches the Spreadsheet where you have provided the data for buy and sell for future analysis [Refer to this](https://drive.google.com/file/d/1JipUU6Im1YVKSdufw4VHitwS010nFigL/view)
-11. Automatic New Stock data Change and Download
-12. Moving Average Crossover strategy: Gives you stocks if Moving Average 1 (Fast, say 50) crosses above Moving Average 2 (slow, say 200) within `N` days.
+3. Breakout Support: Stocks which are in tight consolidation for the past `n` days within `x%` range of recent candle. Might breakout
+4. CCI
+6. MACD
+7. Stochastic
+8. Ichimoku Suggestion (Count out of 3 conditions: Lines Crossing or not, Chikou Lagging inside Prices or Not, Cloud Below the Price or Not)
+9. Moving Average Support (Whether Price is on the Above Side of Moving Average or not)
+10. Bollinger Bands (2 STD Positive and Negative Bollinger Band Support)
+11. RSI Value ( Relative Strength Index)
+12. ATR Value (Average True Range)
+13. ADX (Directional Index to give you idea about momentum)
+14. Stock Movement: Rising or Falling ( `x%` (Default is 5%) near 52 Week high or Low. 
+15. Journal Analysis: Fetches the Spreadsheet where you have provided the data for buy and sell for future analysis [Refer to this](https://drive.google.com/file/d/1JipUU6Im1YVKSdufw4VHitwS010nFigL/view)
+16. Automatic New Stock data Change and Download
+17. Moving Average Crossover strategy: Gives you stocks if Moving Average 1 (Fast, say 50) crosses above Moving Average 2 (slow, say 200) within `N` days.
 
 _______________________________________________________________________________________________________________________________
 **[Intra-Day Trading](https://groww.in/p/intraday-trading/#:~:text=Intraday%20trading%20is%20the%20process,earn%20profits%20from%20stock%20trading.)**:
@@ -76,10 +86,18 @@ ________________________________________________________________________________
 5. Marlet Mood and Sentiment analysis: % change of every Sector / Indices in Live Market. Gives you a mood of overall market right now based on which sector is performing with which mood live. Opens the top performing stocks from each sector 
 
 _____________________________________________________________________________
+**Backtesting**: Backtesting support and results.
+Class to implement just the Buy and sell conditions. Some strategies already implemented:
+1. CCI
+2. MACD
+3. RSI
+4. Stochastic
+5. Moving Average
+_____________________________________________________________________________
 **Coming Next**:
-1. Backtesting Support
+1. Optimization: Find optimal values for each individual stocks because give good results for 35 MA, some give for Stochastic strategy, some for breakout.. etc etc.
 2. Live real time data, if there is any api for free
-3. New Strategies
+3. New Strategies and backtesting support
 
 ______________________________________________________________________________
 ## Starting Motivation?
@@ -93,12 +111,11 @@ ______________________________________________________________________________
 3. Pick and Scan all the stocks based on your budget, loss threshold, profit apetite, `K` Moving Average etc
 
 
-**Note**: I started out as an enthusiast for this concept of `44 SMA` style but backtested it using my own written code and found out that it gives you around `40-45%` Hit-Lose %. So? Learn More.
+**Note**: I started out as an enthusiast for this concept of `44 SMA` style but backtested it using my own written code and found out that it gives you around `40-45%` Hit-Loss %. So? Learn More.
+
 [See this video to know what is mimicks](https://youtu.be/dFibByGQWak?t=3747). All it does is to save your time rather when you have to go through 1800 stocks to pick. You can click and scan the stocks of your moving average. It does not support `Short Selling` but can be implementd by changing the code easily.
 
 
 **This is not a trading Bot or software** but a mere tool to see the live charts, candlesticks for the stocks of your choice. **All it does is tell you all the available stocks** which are closest to and are on the upper side of 44 Moving Average. 
 
 For more info on [44 Moving Average and Swing Trading, see this Most Popular videos of this channel](https://www.youtube.com/c/SIDDHARTHBHANUSHALI/videos?view=0&sort=p&shelf_id=0)
-
-
