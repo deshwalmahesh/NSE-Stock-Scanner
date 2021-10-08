@@ -1,5 +1,5 @@
 # Disclaimer:
-STOCK MARKET IS VERY RISKY UNTIL YOU DO IT PROPERLY. PLEASE DO NOT TAKE TRADES JUST BECAUSE THIS TOOL GIVES YOU THE NAME. APPLY YOUR OWN LEARNINGS, CREATE YOUR OWN STRATEGY, ASSESS RISK & TRADE THE PLAN. No will be held responsible for your losses except you.
+STOCK MARKET IS VERY RISKY UNTIL YOU DO IT PROPERLY. PLEASE DO NOT TAKE TRADES JUST BECAUSE THIS TOOL GIVES YOU THE NAME. APPLY YOUR OWN LEARNINGS, CREATE YOUR OWN STRATEGY, ASSESS RISK & TRADE THE PLAN.
 
 ```diff
 -Trade at you own risk as No one will be held responsible for the losses incurred exept the trader.
@@ -36,7 +36,9 @@ jupyter lab
 
 For usage, see the docstring of code or the example ipython Notebook `Test.ipynb`
 
-*NOTE: There is some bug in fetching live data so if you are not ubale to get some data, restart kernal and run cells again.*
+```diff
+- NOTE: There is some bug in fetching live data and data refresh so if you are not ubale to get some data, or get an error; restart kernal and run cells again
+```
 
 
 **Please share your ideas, views, requirements, knowledge, bug reports, fixes and most importantly; reviews.**
