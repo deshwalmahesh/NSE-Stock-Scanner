@@ -203,6 +203,8 @@ class AnalyseStocks(DataHandler):
             signal_only: Whether to return absolute value or Buy / Sell Signal
         '''
         df = data.copy()
+        df = self.get_MA(df,200, return_df = True)
+
         if df.iloc[0,0] > df.iloc[1,0]: # if the first Date entry [0,0] is > previous data entry [1,0] then it is in descending order, then reverse it for calculation
             df.sort_index(ascending=False, inplace = True)
 
@@ -232,7 +234,7 @@ class AnalyseStocks(DataHandler):
             if (df.iloc[0,-1] > 80) or ((df.iloc[0,-1] < 70) and (df.iloc[1,-1] > 70)):# Coming up from above
                 signal = "Sell"
             
-            elif (df.iloc[0,-1] > 30) and (df.iloc[1,-1] < 30): # Cutting RSI from below
+            elif (df.iloc[0,-1] > 30) and (df.iloc[1,-1] < 30) and (df.loc[0,Close] > df.loc[0,'200-MA']): # Cutting RSI from below but still over 200 MA
                 signal = "Buy"
 
             else: signal = "No Signal"
@@ -275,7 +277,7 @@ class AnalyseStocks(DataHandler):
         return data.iloc[0,-1]
         
 
-    def get_MA(self,df, window:int=14, names:tuple = ('OPEN','CLOSE','LOW','HIGH'), simple:bool = True, return_df:bool =  True):
+    def get_MA(self,df, window:int=44, names:tuple = ('OPEN','CLOSE','LOW','HIGH'), simple:bool = True, return_df:bool =  True):
         '''
         Get Simple Moving Average
         args:
@@ -584,6 +586,45 @@ class AnalyseStocks(DataHandler):
         
         self.recent_info[nifty] = df
         return df
+
+
+    def tight_consolidation_stocks(self, stocks:str = 'nifty_200', diff:float = 0.01, min_count:int = 5, lookback_period:int = 7, names:tuple = ('OPEN','CLOSE','LOW','HIGH')):
+        '''
+        Get all the stocks in tight consolidation. There are certain conditions for consolidation:
+        1. Stock has to be above 50 days Moving Average
+        2. There has to be a minimum of "min_count" candles in that zone
+        3. Closing or Opening has to be within "diff" percentage of the recent Opening / Closing Price
+        
+        args:
+            stocks: Nifty Stocks. Choose from [nifty_50, nifty_100. nifty_200, nifty_500, all_stocks]
+            diff: % difference to be eligible for comparison. 0.01 means 1% of the current closing or Opening price. High value will give too many false stocks and low will give too less      
+            min_touches: Minimum number of candle touches within that zone. High number means that more reliable breakout
+            lookback_period: No of days to lookback. Too huge will give many false names and small value will give too less names
+            names: Names of columns which contains the values for that stock
+        returns:
+                Dictonary containing {stock_name:no of candles}
+        '''
+        OPEN, CLOSE, LOW, HIGH = names
+        result = {}
+        
+        for name in self.data[stocks]:
+            df = self.open_downloaded_stock(name)
+            df = self.get_MA(df,window = 50,names = names)
+            
+            closing = df.loc[0,CLOSE]
+            compare = max(df.loc[0,OPEN], closing)
+
+            if closing > df.loc[0,'50-MA']:
+                
+                count = 1
+                for index in df.index[1:lookback_period]:
+                    if compare - (compare * diff) < max(df.loc[index,OPEN],df.loc[index,CLOSE]) < compare + (compare * diff):
+                        count += 1
+
+                if count >= min_count:
+                    result[name] = count
+                    
+        return dict(sorted(result.items(), key = lambda x: x[1], reverse= True))
 
                      
                      
