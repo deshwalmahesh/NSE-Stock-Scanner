@@ -34,6 +34,8 @@ jupyter lab
 5. Go to first cell (just below *Imports, Defaults and Initializations* where some code is written) and press `Shit + Enter`.
 6. To run any cell, just do the same. [Read the commands here if you need help in running it](https://www.tutorialspoint.com/jupyter/jupyter_notebook_editing.htm)
 
+7. I am updating this code on a regular basis so if you want to keep updated, just run `git pull` inside the same folder
+
 For usage, see the docstring of code or the example ipython Notebook `Test.ipynb`
 
 ```diff
