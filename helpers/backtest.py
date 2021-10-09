@@ -180,7 +180,7 @@ class Backtest():
 
         for index in df.index[1:-1]:
             if (df.loc[index-1,'CCI'] < buying_thresh) and (df.loc[index,'CCI'] > buying_thresh) and (self.can_buy) and \
-                (df.loc[index, CLOSE] > df.loc[index,'50-MA']) and (df.loc[index, CLOSE] > df.loc[index,'200-MA']):
+                (df.loc[index, CLOSE] > df.loc[index,'50-MA']) and (df.loc[index,'50-MA'] > df.loc[index,'200-MA']): # whrn 50-SMA is above 200-SMA
 
                 self.buy(name, date = df.loc[index+1, DATE], price = df.loc[index+1,OPEN])
                 
