@@ -25,7 +25,7 @@ _______________________________________________________________
 2.  Open Terminal ( For Linux) or Command Prompt or Git Shell in Windows
 3. Run the following Commands:
 ```
-git clone https://github.com/deshwalmahesh/NSE-Stock-Scanner.git
+git clone https://github.com/deshwalmahesh/NSE-Stock-Scanner.git (For Windows users, see for the **Green** `Code` button and download the zip file)
 cd ./NSE-Stock-Scanner
 pip install -r requirements.txt
 jupyter lab
