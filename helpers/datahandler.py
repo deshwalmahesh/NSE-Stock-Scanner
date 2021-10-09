@@ -47,7 +47,7 @@ class DataHandler:
     def update_new_listings(self, file_name:str = "EQUITY_L.csv"):
         '''
         Download first file from the url https://www1.nseindia.com/corporates/content/securities_info.htm, it'll have name as "EQUITY_L.csv"
-        Update new stocks as they are listed on the NSE
+        Update new IPO or stocks as they are listed on the NSE and remove the ones which have been removed from the listings
         '''
         df = pd.read_csv(join(expanduser('~'),'Downloads',file_name))
         df = df[df[' SERIES'] == 'EQ']
@@ -59,6 +59,21 @@ class DataHandler:
 
         self.data['all_stocks'] = all_stocks
         self.data['registered_stocks'] = all_registered
+        self.update_data(self.data)
+
+    
+    def update_fresh_nifty_indices(self, index:int, names:list):
+        '''
+        Update the indices of stocks in case they have been re shuffled due to some problem or change in market
+        1. Get data from the URL https://www.nseindia.com/market-data/live-market-indices and download each of the index files
+        2. Open each csv filesand get the recent names
+        3. Pass in the values of index and data manually
+        args:
+            index: Name of the index 50,100,200,500
+            names: List of all the stocks which belong to a particular index
+        '''
+        assert len(names) == index, "Index value and Length of list mismatch"
+        self.data[f"nifty_{str(index)}"] = names
         self.update_data(self.data)
 
 
@@ -130,7 +145,7 @@ class DataHandler:
             save = f"{path}/{ID}_{NAME}_{str(current_date)}.csv"
             df.to_csv(save,index=None)
         except Exception as e:
-            # print(e)
+            print(e)
             pass
 
 
@@ -147,7 +162,7 @@ class DataHandler:
         results = pool.map(self.download_new,stocks)
         pool.close()
         pool.join()
-        return 'Done'
+        return True
 
 
     def check_new_data_availability(self):
@@ -177,14 +192,12 @@ class DataHandler:
         '''
         files = listdir(self.data_path)
         self.data = self.read_data()
-        
+
         for file in files:
             key, name , _ = file.split('_')
             self.data['all_stocks'][key] = file
 
         self.update_data(self.data)
-        # self.data = self.read_data()
-        # self.all_stocks = self.data['all_stocks']
 
 
 

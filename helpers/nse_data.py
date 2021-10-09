@@ -1,5 +1,6 @@
-from .investing import *
+from .investing import Investing, pd
 from bs4 import BeautifulSoup
+import requests
 
 In = Investing()
 
@@ -24,7 +25,6 @@ class NSEData:
         for cookie in self.cookies:
             session.cookies.set(cookie, self.cookies[cookie])
 
-    
     
     def get_live_nse_data(self, url:str):
         '''
