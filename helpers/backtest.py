@@ -13,7 +13,7 @@ class Backtest():
     def __init__(self):
         '''
         '''
-        self.strategies = {'cci':self.cci, 'macd':self.macd, 'rsi': self.rsi,'ma':self.ma}
+        self.strategies = {'cci':self.cci, 'macd':self.macd, 'rsi': self.rsi,'ma':self.ma, "stochastic_osc":self.stochastic_osc}
 
 
     def history_init(self, name):
@@ -262,7 +262,6 @@ class Backtest():
             elif (df.loc[index-1,'MACD Diff'] > 0) and (df.loc[index,'MACD Diff'] < 0) and ((not self.can_buy)): # Sell means to add to the account
                 self.sell(name, date = df.loc[index+1, DATE], price = df.loc[index+1,OPEN])
   
-
     
     def ma(self, name, df, cols:tuple = ('OPEN','CLOSE','LOW','HIGH', 'DATE'), ma_type:str='simple', window:int = 44, diff:float = 0.015, r2r:float = 1.99):
         '''
@@ -316,11 +315,12 @@ class Backtest():
                     self.sell(name, date = df.loc[index, DATE], price = selling_price)
 
 
-    def Stochastic_Osc(self,name, df, k_period:int = 14, d_period:int = 3, smooth_k = 3, buying_thresh:int = 20, selling_thresh:int =  80, cols = ('OPEN','CLOSE','LOW','HIGH', 'DATE')):
+    def stochastic_osc(self,name, df, k_period:int = 14, d_period:int = 3, smooth_k = 3, buying_thresh:int = 20, selling_thresh:int =  80, cols = ('OPEN','CLOSE','LOW','HIGH', 'DATE')):
         '''
         Test Stochastic Oscillator Strategy: Different from Stochastic RSI
         1. Buy when the fast line cuts the slow line from below in an OVERSOLD zone (below 30). Wait for both lines to go above Oversold and then buy
         2. Sell when both lines reaches Overbought region (above 70) and fast line crosses slow from above
+        3. Both lines must be Over the buying threshold to buy or Below the selling_threshold to sell
         
         https://www.elearnmarkets.com/blog/stochastic-indicator/
 
@@ -336,25 +336,6 @@ class Backtest():
             
         returns: A dictonary of top-n stocks which gave highest returns
         '''
-        def get_lock(df, index):
-            '''
-            Get the Buying or Selling Lock. Stochastic tend to move fast so everytime Blue Crosses the red from below, buy lock will be activated and the moment
-            it'll cut again from below, it'll be deactivated
-            '''
-            if (df.loc[index,'Diff'] < 0) and (df.loc[index-1,'Diff'] > 0) and \
-                (df.loc[index,'Blue Line'] < buying_thresh) and (df.loc[index,'Red Line'] < buying_thresh):
-                buy_lock = True
-                sell_lock = False
-            
-            elif (df.loc[index,'Blue Line'] < df.loc[index,'Red Line']) and (df.loc[index-1,'Blue Line'] > df.loc[index-1,'Red Line']) and \
-                 (df.loc[index,'Blue Line'] > buying_thresh) and (df.loc[index,'Red Line'] > buying_thresh):
-                buy_lock = False
-                sell_lock = True
-            
-
-
-
-
         OPEN, CLOSE, LOW, HIGH, DATE = cols
       
         df = In.get_MA(df, window = 200, names = (OPEN, CLOSE, LOW, HIGH), return_df = True) # Buy Only Over 200-MA Closing
@@ -365,10 +346,29 @@ class Backtest():
         df.dropna(inplace=True) # Drop the oldest ones which are NaN-s
         df.reset_index(inplace=True,drop=True)
 
+        buy_lock = False
+        sell_lock = False
         for index in df.index[1:-1]: # Has to consider Past and Future candle  so [1:-1]
 
-            if (df.loc[index-1,'MACD Diff'] < 0) and (df.loc[index,'MACD Diff'] > 0) and (self.can_buy): # Buy means to decrease the account value
+            # Many conditions. Blue line out but Red line inside
+            # Blue and red both outside
+            # Blue and red both inside
+            
+            if (df.loc[index-1,'Diff'] < 0) and (df.loc[index,'Diff'] > 0):
+                sell_lock = False
+                if (df.loc[index,'Blue Line'] < buying_thresh) and (df.loc[index,'Red Line'] < buying_thresh):
+                    buy_lock = True
+
+
+            elif (df.loc[index-1,'Diff'] > 0) and (df.loc[index,'Diff'] < 0):
+                buy_lock = False
+
+                if (df.loc[index,'Blue Line'] > selling_thresh) and (df.loc[index,'Red Line'] > selling_thresh):
+                    sell_lock = True
+
+
+            if (self.can_buy) and (buy_lock) and (df.loc[index,'Red Line'] > buying_thresh) and (df.loc[index,CLOSE] > df.loc[index,'200-MA']): # If red line crosses the buying threshold, means blue is already there
                 self.buy(name, date = df.loc[index+1, DATE], price = df.loc[index+1,OPEN])
 
-            elif (df.loc[index-1,'MACD Diff'] > 0) and (df.loc[index,'MACD Diff'] < 0) and ((not self.can_buy)): # Sell means to add to the account
+            elif (not self.can_buy) and (sell_lock) and (df.loc[index,'Red Line'] < selling_thresh): # Sell only when both the lines are below the selling threshold
                 self.sell(name, date = df.loc[index+1, DATE], price = df.loc[index+1,OPEN])

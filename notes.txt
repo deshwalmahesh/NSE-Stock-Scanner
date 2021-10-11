@@ -42,3 +42,5 @@ ________________________________________________________________________________
 Do not buy when Stock is near the upper band of a channel as it is over extended already.
 
 TRIX and Stochastic RSI tend to support shorter time frame better
+
+Oscillators works best for Choppy or range bound market. So is ADX is less than 25, you might want to trade on oscillators else use them as a tool to get extra confirmation signals. Using patterns with Oscillators is better.

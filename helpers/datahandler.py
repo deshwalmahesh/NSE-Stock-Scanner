@@ -179,8 +179,9 @@ class DataHandler:
             mkdir(self.data_path)
             self.multiprocess_download_stocks()
         
-        if len(set(self.all_stocks.keys()) - set([i.split('_')[0] for i in listdir('./data')])):
-            print('Data Count Mismatch. Downloading Missing.....')
+        missing_list = set(self.all_stocks.keys()) - set([i.split('_')[0] for i in listdir('./data')])
+        if len(missing_list):
+            print('Data Count Mismatch. Downloading Missing.....',missing_list)
             self.multiprocess_download_stocks()
         
         self.update_fresh_files()

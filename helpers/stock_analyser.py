@@ -371,7 +371,7 @@ class AnalyseStocks(DataHandler):
         return df.iloc[0,-3:].values # Negative, Positive, ADX
 
 
-    def Stochastic(self, data, k_period:int = 14, d_period:int = 3, smooth_k = 3, names:tuple = ('OPEN','CLOSE','LOW','HIGH'),return_df:bool=False):
+    def Stochastic(self, data, k_period:int = 14, d_period:int = 3, smooth_k = 3, names:tuple = ('OPEN','CLOSE','LOW','HIGH'),return_df:bool=False, signal_only:bool = False):
         '''
         Implementation of the Stochastic Oscillator. Returns the Fast and Slow lines values or the whole DataFrame
         args:
@@ -381,6 +381,7 @@ class AnalyseStocks(DataHandler):
             smooth_k: Smoothening the Fast line value. With increase/ decrease in number, it becomes the Fast or Slow Stochastic
             names: Names of the columns which contains the corresponding values
             return_df: Whether to return the DataFrame or the Values
+            signal_only: Whether to return the signal only
         out:
             Returns either the Array containing (fast_line,slow_line) values or the entire DataFrame
         '''
@@ -407,6 +408,17 @@ class AnalyseStocks(DataHandler):
         df.drop(['n_high','n_low'],inplace=True,axis=1)
 
         df.sort_index(ascending = True, inplace = True)
+
+        if signal_only:
+            if ((df.loc[0,'Red Line'] - df.loc[0,'Blue Line']) > 0) and ((df.loc[1,'Red Line'] - df.loc[1,'Blue Line']) < 0) and (df.loc[1,'Blue Line'] < 20):
+                signal = 'Buy'
+            
+            if ((df.loc[0,'Red Line'] - df.loc[0,'Blue Line']) < 0) and ((df.loc[1,'Red Line'] - df.loc[1,'Blue Line']) > 0) and (df.loc[1,'Blue Line'] > 80):
+                signal = 'Sell'
+
+            else: signal =  'No Signal'
+        
+            return signal
 
         if return_df:
             return df
@@ -610,11 +622,12 @@ class AnalyseStocks(DataHandler):
         for name in self.data[stocks]:
             df = self.open_downloaded_stock(name)
             df = self.get_MA(df,window = 50,names = names)
+            df = self.get_MA(df,window = 200,names = names)
             
             closing = df.loc[0,CLOSE]
             compare = max(df.loc[0,OPEN], closing)
 
-            if closing > df.loc[0,'50-MA']:
+            if (closing > df.loc[0,'50-MA']) and (df.loc[0,'50-MA'] > df.loc[0,'200-MA']):
                 
                 count = 1
                 for index in df.index[1:lookback_period]:
