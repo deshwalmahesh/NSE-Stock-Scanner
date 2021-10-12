@@ -103,7 +103,6 @@ class IntraDay():
         return whole.intersection(nr)
     
     
-    
     def prob_by_percent_change(self, symbol:str = None, index:int = 200, time_period:int = 60, change_percent:float = 0.1, sort_by:str = 'Long Probability', top_k:int = 5):
         '''
         Probability of a stock for acheiving "change %" for High / Low if you buy it at market price on the opening bell. Analysed on historical data of "time_period" days 
@@ -132,8 +131,6 @@ class IntraDay():
 
         return dict(sorted(res.items(), key=lambda item: item[1][sort_by],reverse = True)[:top_k])
 
-    
-    
     
 class MarketSentiment:
     '''
