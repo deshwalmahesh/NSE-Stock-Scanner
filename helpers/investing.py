@@ -217,6 +217,7 @@ class Investing(AnalyseStocks):
         profit = risk_to_reward_ratio * diff
         profit_perc = round((profit/entry)*100,2)
         target = round(entry + profit,2)
+        investment = entry * quantity
         
         
         if plot_candle:
@@ -227,7 +228,7 @@ class Investing(AnalyseStocks):
             warnings.warn(f"Risk should be atleast {r} for you to afford {name}")
             return None
             
-        return {'Buying Price':round(entry,2),'Stop-Loss %': stop_loss_perc,'Target %':profit_perc,'Quantity':quantity,'Stop-Loss Price':stop_loss,'Trigger Price':target,
+        return {'Buying Price':round(entry,2),'Stop-Loss %': stop_loss_perc,'Target %':profit_perc,'Quantity':quantity,'Stop-Loss Price':stop_loss,'Trigger Price':target,'investment_required':investment,
                 'Risk Per Share':round(diff,2),'Profit Per Share':round(profit,2),'Max loss on this config':round(quantity*diff,2),
-                'Max Gain on this config': round(quantity*profit,2),'Price To Profit Ratio': round(entry / (diff*2 ),2), 'Index':self.get_index(name),}
+                'Max Gain on this config': round(quantity*profit,2), 'Index':self.get_index(name),}
     

@@ -1,4 +1,5 @@
 from jugaad_data.nse import stock_df
+from .nse_data import NSEData
 
 from datetime import date, datetime, timedelta
 
@@ -7,21 +8,18 @@ import numpy as np
 
 from os import listdir, mkdir
 from shutil import rmtree
-from os.path import isfile, join, expanduser
+from os.path import join, expanduser
 
 import json
 import warnings
-import math
-from random import sample
 
-import requests
 import random
 
 from multiprocessing import Pool
-from pathlib import Path
+
+NSE = NSEData()
 
 
-current_date = date.today()
 drop = ['SERIES','PREV. CLOSE','VWAP','VOLUME','VALUE','NO OF TRADES', 'LTP']
 
 
@@ -44,38 +42,60 @@ class DataHandler:
             self.check_new_data_availability()
 
 
-    def update_new_listings(self, file_name:str = "EQUITY_L.csv"):
+    def update_new_listings(self):
         '''
-        Download first file from the url https://www1.nseindia.com/corporates/content/securities_info.htm, it'll have name as "EQUITY_L.csv"
         Update new IPO or stocks as they are listed on the NSE and remove the ones which have been removed from the listings
         '''
-        df = pd.read_csv(join(expanduser('~'),'Downloads',file_name))
+        df = pd.read_csv("https://archives.nseindia.com/content/equities/EQUITY_L.csv")
         df = df[df[' SERIES'] == 'EQ']
         all_registered = df['SYMBOL'].values.tolist()
 
         all_stocks = {}
         for index in df.index:
-            all_stocks[df.loc[index,"SYMBOL"]] = f'{df.loc[index,"SYMBOL"]}_{df.loc[index,"NAME OF COMPANY"]}_{str(current_date)}.csv'
+            try:
+                self.open_live_stock_data(df.loc[index,"SYMBOL"])
+                all_stocks[df.loc[index,"SYMBOL"]] = f'{df.loc[index,"SYMBOL"]}_{df.loc[index,"NAME OF COMPANY"]}_{str(self.present)}.csv'
+            except Exception as e:
+                print(df.loc[index,"SYMBOL"],'-----',e)
+                pass
 
         self.data['all_stocks'] = all_stocks
         self.data['registered_stocks'] = all_registered
         self.update_data(self.data)
 
-    
-    def update_fresh_nifty_indices(self, index:int, names:list):
-        '''
-        Update the indices of stocks in case they have been re shuffled due to some problem or change in market
-        1. Get data from the URL https://www.nseindia.com/market-data/live-market-indices and download each of the index files
-        2. Open each csv filesand get the recent names
-        3. Pass in the values of index and data manually
-        args:
-            index: Name of the index 50,100,200,500
-            names: List of all the stocks which belong to a particular index
-        '''
-        assert len(names) == index, "Index value and Length of list mismatch"
-        self.data[f"nifty_{str(index)}"] = names
-        self.update_data(self.data)
+        print('Update Successful. Downloading New Files')
+        rmtree(self.data_path) # Delete Data Folder so that new things can be downloaded
+        mkdir(self.data_path)
 
+        self.multiprocess_download_stocks()
+
+    
+    def update_fresh_nifty_indices(self):
+        '''
+        Update all the new Nifty Indices as they might have changed or altered. Good to call it once in a while
+        '''
+        success = True
+        try:
+            for index_name in ['Sectoral Indices','Thematic Indices']: # Update Sectoral first
+                index_key = index_name.replace(' ','_').lower() # setoral_indices, thematic_indices
+                self.data[index_key] = {} # Will contain names of individual sectors
+
+                branches = self.data['all_indices_names'][index_name] # Get all the available sectors and themes
+                for branch_name in branches: # get individial names: Such as Nifty IT, Nifty Auto etc
+                    names = NSE.open_nse_index(branch_name, show_n=9999)['symbol'].tolist()
+                    self.data[index_key][branch_name] = names
+
+            nifties = {'nifty_50':'NIFTY 50', 'nifty_100': 'NIFTY 100', 'nifty_200':'NIFTY 200', 'nifty_500':'NIFTY500 MULTICAP 50:25:25'}
+            for index_name in nifties.keys():
+                names = NSE.open_nse_index(nifties[index_name], show_n=9999)['symbol'].tolist()
+                self.data[index_name] = names
+        except Exception as e:
+            success = False
+            warnings.warn(f"ERROR Occured: {e}\nTry again later")
+            
+        if success:
+            self.update_data(self.data)
+        
 
     def __fresh(self,):
         files = listdir(self.data_path)
@@ -99,7 +119,7 @@ class DataHandler:
 
 
     def update_data(self, updated_data:dict, path:str = './', file:str = 'data.json'):
-        '''
+        '''the balkan line
         Update the data in the json file
         args:
             updated_data: Dictonary you want to update
@@ -110,15 +130,14 @@ class DataHandler:
             json.dump(updated_data,f)
 
     
-    def open_live_stock_data(self,name:str):
+    def open_live_stock_data(self,name:str,):
         '''
         Open the fresh stock from the market
         args:
             name: ID of the stock given
         '''
-        drop = ['SERIES','PREV. CLOSE','VWAP','VOLUME','VALUE','NO OF TRADES', 'LTP']
         return stock_df(symbol=name, from_date = self.present - timedelta(days = 1000), to_date = self.present, series="EQ").drop(drop,axis=1)
-
+    
     
     def open_downloaded_stock(self, name:str):
         '''
@@ -139,13 +158,13 @@ class DataHandler:
             name: ID / name of the Stock
         '''
         try:
-            df = stock_df(symbol=name, from_date = current_date - timedelta(days = 1000), to_date = current_date, series="EQ").drop(drop,axis=1)
+            df = self.open_live_stock_data(name)
             df['DATE'] = pd.to_datetime(df['DATE'])
             ID, NAME, _ = self.all_stocks[name].split('_')
-            save = f"{path}/{ID}_{NAME}_{str(current_date)}.csv"
+            save = f"{path}/{ID}_{NAME}_{str(self.present)}.csv"
             df.to_csv(save,index=None)
         except Exception as e:
-            print(e)
+            print(name,'----',e)
             pass
 
 

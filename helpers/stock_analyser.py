@@ -1,13 +1,12 @@
 from .datahandler import *
-import matplotlib.pyplot as plt
-import seaborn as sns
-import mplfinance as fplt
+from random import sample
 import plotly.graph_objects as go
-from plotly import colors as plotly_colors
 from .candlestick import *
 from ta.trend import ADXIndicator, macd_diff, cci
+from .nse_data import NSEData
 
 CP = CandlePattern()
+NSE = NSEData()
 
 
 class AnalyseStocks(DataHandler):
@@ -24,16 +23,18 @@ class AnalyseStocks(DataHandler):
         self.indices = {'nifty_50': 'Nifty 50','nifty_100':'Nifty 100','nifty_200':'Nifty 200','nifty_500':'Nifty 500'}
 
     
-    def get_index(self,symbol:str):
+    def get_index(self,symbol:str, category:str='nifty'):
         '''
         Get the Index of the symbol from nifty 50,100,200,500
         args:
             symbol: Name /  ID od the company on NSE
+            category: Which category to return. "nifty" returns the nifty index; "all" returns a dictonary in which the stock is mentioned sectoral  and thematic
         '''
-        for index in self.indices.keys():
-            if symbol in self.data[index]:
-                return self.indices[index]
-        return 'Other'
+        if category == 'nifty':
+            for index in self.indices.keys():
+                if symbol in self.data[index]:
+                    return self.indices[index]
+            return 'Other'
     
 
     def is_ma_eligible(self, df, limit:float, mv = 44, names:tuple = ('DATE','OPEN','CLOSE','LOW','HIGH')):
@@ -600,7 +601,7 @@ class AnalyseStocks(DataHandler):
         return df
 
 
-    def tight_consolidation_stocks(self, stocks:str = 'nifty_200', diff:float = 0.01, min_count:int = 5, lookback_period:int = 7, names:tuple = ('OPEN','CLOSE','LOW','HIGH')):
+    def tight_consolidation_stocks(self, stocks:str = 'nifty_200', diff:float = 0.01, min_count:int = 5, lookback_period:int = 7, names:tuple = ('OPEN','CLOSE','LOW','HIGH'), force_live:bool = False):
         '''
         Get all the stocks in tight consolidation. There are certain conditions for consolidation:
         1. Stock has to be above 50 days Moving Average
@@ -613,6 +614,7 @@ class AnalyseStocks(DataHandler):
             min_touches: Minimum number of candle touches within that zone. High number means that more reliable breakout
             lookback_period: No of days to lookback. Too huge will give many false names and small value will give too less names
             names: Names of columns which contains the values for that stock
+            force_live: Whether to force download the live market. Market is updated after 11:30 PM, force_live gets the date of past 50 days after 3:30
         returns:
                 Dictonary containing {stock_name:no of candles}
         '''
@@ -620,10 +622,14 @@ class AnalyseStocks(DataHandler):
         result = {}
         
         for name in self.data[stocks]:
-            df = self.open_downloaded_stock(name)
+            if not force_live:
+                df = self.open_downloaded_stock(name)
+            else:
+                df = NSE.fifty_days_data(name)
+
             df = self.get_MA(df,window = 50,names = names)
             df = self.get_MA(df,window = 200,names = names)
-            
+
             closing = df.loc[0,CLOSE]
             compare = max(df.loc[0,OPEN], closing)
 

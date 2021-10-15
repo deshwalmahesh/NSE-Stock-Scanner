@@ -145,7 +145,7 @@ class Backtest():
         x['ROI'] = x.apply(lambda row: self.calculate_ROI(row),axis=1)
         x['wins'] = x['p&l'].apply(lambda x: sum([True if i >0 else False for i in x]))
         x['losses'] = x.apply(lambda row: row['sells'] - row['wins'],axis=1)
-        x['win%'] = x.apply(lambda row: round((row['wins'] - row['losses'])/row['sells'],2),axis=1)
+        x['win%'] = x.apply(lambda row: round((row['wins'])/row['sells'],2),axis=1)
         
 
         x.sort_values(['win%','wins','ROI'],ascending=False, inplace=True) # 3 priorities of sorting in case of conflict
