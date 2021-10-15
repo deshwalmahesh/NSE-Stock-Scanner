@@ -46,24 +46,27 @@ class DataHandler:
         '''
         Update new IPO or stocks as they are listed on the NSE and remove the ones which have been removed from the listings
         '''
+        print('\nUpdating New Listings.....')
+        old = set(self.data['registered_stocks'])
         df = pd.read_csv("https://archives.nseindia.com/content/equities/EQUITY_L.csv")
         df = df[df[' SERIES'] == 'EQ']
-        all_registered = df['SYMBOL'].values.tolist()
+        new = set(df['SYMBOL'].values.tolist())
 
-        all_stocks = {}
+        to_update = old.union(new) - old.intersection(new)
+        df = df[df['SYMBOL'].isin(to_update)]
+
         for index in df.index:
             try:
                 self.open_live_stock_data(df.loc[index,"SYMBOL"])
-                all_stocks[df.loc[index,"SYMBOL"]] = f'{df.loc[index,"SYMBOL"]}_{df.loc[index,"NAME OF COMPANY"]}_{str(self.present)}.csv'
+                self.data['registered_stocks'].append(df.loc[index,"SYMBOL"])
+                self.data['all_stocks'][df.loc[index,"SYMBOL"]] = f'{df.loc[index,"SYMBOL"]}_{df.loc[index,"NAME OF COMPANY"]}_{str(self.present)}.csv'
             except Exception as e:
-                print(df.loc[index,"SYMBOL"],'-----',e)
+                print("Error: ",df.loc[index,"SYMBOL"])
                 pass
 
-        self.data['all_stocks'] = all_stocks
-        self.data['registered_stocks'] = all_registered
         self.update_data(self.data)
 
-        print('Update Successful. Downloading New Files')
+        print('\nUpdate Successful. Downloading New Files')
         rmtree(self.data_path) # Delete Data Folder so that new things can be downloaded
         mkdir(self.data_path)
 
@@ -74,6 +77,7 @@ class DataHandler:
         '''
         Update all the new Nifty Indices as they might have changed or altered. Good to call it once in a while
         '''
+        print('Updating New Nifty, Sectoral and thematic Indices')
         success = True
         try:
             for index_name in ['Sectoral Indices','Thematic Indices']: # Update Sectoral first
@@ -85,10 +89,15 @@ class DataHandler:
                     names = NSE.open_nse_index(branch_name, show_n=9999)['symbol'].tolist()
                     self.data[index_key][branch_name] = names
 
+            valid_names = [] # Names which are in Nifty Index but not in registered
             nifties = {'nifty_50':'NIFTY 50', 'nifty_100': 'NIFTY 100', 'nifty_200':'NIFTY 200', 'nifty_500':'NIFTY500 MULTICAP 50:25:25'}
             for index_name in nifties.keys():
                 names = NSE.open_nse_index(nifties[index_name], show_n=9999)['symbol'].tolist()
-                self.data[index_name] = names
+                for name in names:
+                    if name in self.data['registered_stocks']:
+                        valid_names.append(name)
+                self.data[index_name] = valid_names
+
         except Exception as e:
             success = False
             warnings.warn(f"ERROR Occured: {e}\nTry again later")
