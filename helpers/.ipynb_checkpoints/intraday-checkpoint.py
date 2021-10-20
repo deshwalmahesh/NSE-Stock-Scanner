@@ -1,19 +1,20 @@
 from helpers.investing import *
 from datetime import date, datetime, timedelta
 import calendar
-from .nse_data import NSEData
+from .nse_data import NSEData, requests
 from bs4 import BeautifulSoup
 
 In = Investing()
 NSE = NSEData()
 present = date.today()
 
+
 class IntraDay():
     '''
     Class for Intraday Screening of stocks
     '''
     
-    def whole_number_strategy(self,nifty:int=50, min_val:int=100, max_val:int=5000, return_list = False):
+    def whole_number_strategy(self,nifty:int=50, min_val:int=100, max_val:int=5000, return_list = False, print_results:bool = True):
         '''
         If Open == High or Low for a stock around 9:30, go long if Open == Low else go high only after 9:30 on 15 minutes candle
         args:
@@ -21,6 +22,7 @@ class IntraDay():
             min_val: Minimum value to consider
             return_list: Whether to return list or Dictonary
             max_val: Maximum value of stock price to consider
+            print_results: Whether to print the results or not
         returns:
             Dictonary of tuples {"Long":[(name, Open, nifty Index), ...], "Short":[(name, Open, nifty Index), ...]}
         '''
@@ -43,15 +45,29 @@ class IntraDay():
                 low =  df.loc[index,'dayLow']
                 ltp = df.loc[index,'lastPrice']
                 name = df.loc[index,'symbol']
+                stock = In.open_downloaded_stock(name)
+                atr = round(In.get_ATR(stock),2)
                 
-                minus = low - open_ if open_ == high else high - open_
-                change = str(round((minus/open_)*100, 2))+'%'
+                minus = low - open_ if open_ == high else high - open_ # current change that has already been done
+                minus = abs(round(minus,2))
+
+                change_perc = str(round((minus/open_)*100, 2))+'%'
+
+                remaining_move = round((minus - atr) / atr,2)
                 
                 lis.append(name)
-                result['Long'].append((name,change,In.get_index(name))) if open_ == low else result['Short'].append((name,change,In.get_index(name)))
+                result['Long'].append((name,minus,atr,change_perc, remaining_move, In.get_index(name))) if open_ == low else result['Short'].append((name,minus,atr,change_perc,remaining_move,In.get_index(name)))
+        
+        if print_results:
+            for key in result.keys():
+                print(key,":\n","Name - Change - ATR - Change% - Remaining Move - Index:\n")
+                for r in sorted(result[key],key=lambda x: x[-2]):
+                    print(r,'\n')
+            return None
                 
         if return_list:
             return lis
+
         return result
 
 
@@ -88,7 +104,6 @@ class IntraDay():
         return whole.intersection(nr)
     
     
-    
     def prob_by_percent_change(self, symbol:str = None, index:int = 200, time_period:int = 60, change_percent:float = 0.1, sort_by:str = 'Long Probability', top_k:int = 5):
         '''
         Probability of a stock for acheiving "change %" for High / Low if you buy it at market price on the opening bell. Analysed on historical data of "time_period" days 
@@ -117,8 +132,39 @@ class IntraDay():
 
         return dict(sorted(res.items(), key=lambda item: item[1][sort_by],reverse = True)[:top_k])
 
+
     
-    
+    def ATR_strategy(self, index:str, possible_reversal:bool = False):
+        '''
+        Based on the ATR of the given stock, check how much the data has moved already and how much space to enter in the stock is still remaining.
+        If there is no space or the stock has crossed it's ATR, the stock might go in the opposite direction now
+        args:
+            index: Any name from the DataHandler.data['all_indices_names'].values . Such as NIFTY 50, NIFTY METAL, NIFTY MNC etc
+            possible_reversal: Whether to sort the data by possible reversal or remaining move. Possible reversal means it has reached it's ATR in either side and might reverse
+        returns: A Dataframe of Possible % of moves remaining. A negative % means there is still a move and a Positive % means that it has either reversed or might reverse
+        '''
+        
+        df = NSE.open_nse_index(index, show_n=500)
+        atrs = {}
+        for name in df['symbol']:
+            try:
+                atrs[name] = In.get_ATR(In.open_downloaded_stock(name))
+            except:
+                atrs[name] = np.nan
+
+        df['ATR'] = atrs.values()
+        df.dropna(inplace=True)
+        
+        
+        df['remaining move %'] = df.apply(lambda row: round((max(abs(row['open'] - row['dayHigh']), abs(row['open'] - row['dayLow'])) - row['ATR']) / row['ATR'],2),axis=1)
+        
+        if possible_reversal:
+            df.sort_values('remaining move %', ascending=False, inplace=True)
+        else:
+            df.sort_values('remaining move %', ascending=True, inplace=True)
+            
+        return df
+
     
 class MarketSentiment:
     '''

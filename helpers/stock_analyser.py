@@ -3,6 +3,7 @@ from random import sample
 import plotly.graph_objects as go
 from .candlestick import *
 from ta.trend import ADXIndicator, macd_diff, cci
+from ta.volatility import average_true_range
 from .nse_data import NSEData
 
 CP = CandlePattern()
@@ -28,13 +29,27 @@ class AnalyseStocks(DataHandler):
         Get the Index of the symbol from nifty 50,100,200,500
         args:
             symbol: Name /  ID od the company on NSE
-            category: Which category to return. "nifty" returns the nifty index; "all" returns a dictonary in which the stock is mentioned sectoral  and thematic
+            category: Which category to return. "nifty" returns the nifty index; "all" returns a dictonary in which the stock is mentioned nifty, sectoral and thematic
         '''
         if category == 'nifty':
             for index in self.indices.keys():
                 if symbol in self.data[index]:
                     return self.indices[index]
             return 'Other'
+        
+        else:
+            result = []
+            for index in self.indices.keys():
+                if symbol in self.data[index]:
+                    result.append(self.indices[index])
+                    break
+            
+            for group_name in ["sectoral_indices", "thematic_indices"]:
+                for sector in self.data[group_name].keys():
+                    if symbol in self.data[group_name][sector]:
+                        result.append(sector)
+            return result
+
     
 
     def is_ma_eligible(self, df, limit:float, mv = 44, names:tuple = ('DATE','OPEN','CLOSE','LOW','HIGH')):
@@ -259,17 +274,8 @@ class AnalyseStocks(DataHandler):
         if data.iloc[0,0] > data.iloc[1,0]: # if the first Date entry [0,0] is > previous data entry [1,0] then it is in descending order, then reverse it for calculation
             data.sort_index(ascending=False, inplace = True)
 
-
-        high_low = data[High] - data[Low]
-        high_close = np.abs(data[High] - data[Close].shift())
-        low_close = np.abs(data[Low] - data[Close].shift())
-
-        ranges = pd.concat([high_low, high_close, low_close], axis=1)
-        true_range = np.max(ranges, axis=1)
-
-        ATR = true_range.rolling(window).mean()
         
-        data['ATR'] = ATR
+        data['ATR'] = average_true_range(data[High],data[Low],data[Close])
         data.sort_index(ascending=True, inplace = True)
 
         if return_df:

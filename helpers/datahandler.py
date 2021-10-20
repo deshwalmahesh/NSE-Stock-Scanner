@@ -89,10 +89,11 @@ class DataHandler:
                     names = NSE.open_nse_index(branch_name, show_n=9999)['symbol'].tolist()
                     self.data[index_key][branch_name] = names
 
-            valid_names = [] # Names which are in Nifty Index but not in registered
             nifties = {'nifty_50':'NIFTY 50', 'nifty_100': 'NIFTY 100', 'nifty_200':'NIFTY 200', 'nifty_500':'NIFTY500 MULTICAP 50:25:25'}
             for index_name in nifties.keys():
-                names = NSE.open_nse_index(nifties[index_name], show_n=9999)['symbol'].tolist()
+                valid_names = [] # Names which are in Nifty Index but not in registered
+
+                names = NSE.open_nse_index(nifties[index_name], show_n=500)['symbol'].tolist()
                 for name in names:
                     if name in self.data['registered_stocks']:
                         valid_names.append(name)
@@ -103,6 +104,7 @@ class DataHandler:
             warnings.warn(f"ERROR Occured: {e}\nTry again later")
             
         if success:
+            print('Successful!')
             self.update_data(self.data)
         
 

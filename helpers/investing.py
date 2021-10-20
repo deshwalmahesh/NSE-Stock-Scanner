@@ -176,7 +176,7 @@ class Investing(AnalyseStocks):
         return pic
         
         
-    def get_particulars(self, name, budget:float, risk:float, risk_to_reward_ratio:float=1.999, entry:float=None, stop_loss:float=None, Low:str = 'LOW', High:str = 'HIGH', delta:float = 0.001, plot_candle:bool = False):
+    def get_particulars(self, name, budget:float, risk:float, risk_to_reward_ratio:float=2.5, entry:float=None, stop_loss:float=None, Low:str = 'LOW', High:str = 'HIGH', delta:float = 0.001, plot_candle:bool = False):
         '''
         Display the particulars of a trade before buying
         args:
@@ -230,5 +230,5 @@ class Investing(AnalyseStocks):
             
         return {'Buying Price':round(entry,2),'Stop-Loss %': stop_loss_perc,'Target %':profit_perc,'Quantity':quantity,'Stop-Loss Price':stop_loss,'Trigger Price':target,'investment_required':investment,
                 'Risk Per Share':round(diff,2),'Profit Per Share':round(profit,2),'Max loss on this config':round(quantity*diff,2),
-                'Max Gain on this config': round(quantity*profit,2), 'Index':self.get_index(name),}
+                'Max Gain on this config': round(quantity*profit,2), 'Index':self.get_index(name, 'all'),}
     

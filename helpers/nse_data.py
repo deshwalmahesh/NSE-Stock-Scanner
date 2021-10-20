@@ -1,6 +1,8 @@
 import pandas as pd
 import requests
 from datetime import date
+from bs4 import BeautifulSoup
+import json
 
 current_date = date.today()
 
@@ -86,3 +88,37 @@ class NSEData:
 
         df = df.loc[:,["DATE","OPEN","HIGH","LOW","CLOSE","52W H","52W L","SYMBOL"]] # to match previous API's Columns and structure
         return df
+    
+    
+def get_mmi(raw = False):
+    '''
+    All credits to https://www.tickertape.in/market-mood-index. Please refer to the link
+    args:
+        raw: Whether to return the raw json of data for MMI
+    '''
+    url = "https://www.tickertape.in/market-mood-index"
+    page = requests.get(url)
+    soup = BeautifulSoup(page.content, "lxml")
+
+
+    script = soup.find_all('script' ,{"id":"__NEXT_DATA__"})[0]
+    values = json.loads(script.string)['props']['pageProps']['nowData']
+    current = values['currentValue']
+    last_day = values['lastDay']['indicator']
+    last_week = values['lastWeek']['indicator']
+    last_month = values['lastMonth']['indicator']
+    
+    if raw:
+        return values
+    
+    if current < 30:
+        print('Boom!!! You might want to Buy for Investment purpose. Market is in Extreme Fear')
+        
+    elif 30 < current < 50:
+        print('Market is in Fear Zone. You might want it to go to Extreme Fear to start buying')
+        
+    elif 50 < current < 80:
+        print('Market is in Greed zone! You might want to book profits. Keep yourself from taking new positions')
+    
+    elif current > 80:
+        print("WARNING!!! You might want to book profits. Do not take fresh positions for Investment purpose now. Market is Extremely Greedy")

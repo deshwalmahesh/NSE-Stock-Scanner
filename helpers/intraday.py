@@ -1,12 +1,13 @@
 from helpers.investing import *
 from datetime import date, datetime, timedelta
 import calendar
-from .nse_data import NSEData
+from .nse_data import NSEData, requests
 from bs4 import BeautifulSoup
 
 In = Investing()
 NSE = NSEData()
 present = date.today()
+
 
 class IntraDay():
     '''
@@ -130,6 +131,39 @@ class IntraDay():
             res[name] = {"Long Probability":round(high/time_period,2), "Short Probability":round(low/time_period,2),} #"Index": In.get_index(name)}
 
         return dict(sorted(res.items(), key=lambda item: item[1][sort_by],reverse = True)[:top_k])
+
+
+    
+    def ATR_strategy(self, index:str, possible_reversal:bool = False):
+        '''
+        Based on the ATR of the given stock, check how much the data has moved already and how much space to enter in the stock is still remaining.
+        If there is no space or the stock has crossed it's ATR, the stock might go in the opposite direction now
+        args:
+            index: Any name from the DataHandler.data['all_indices_names'].values . Such as NIFTY 50, NIFTY METAL, NIFTY MNC etc
+            possible_reversal: Whether to sort the data by possible reversal or remaining move. Possible reversal means it has reached it's ATR in either side and might reverse
+        returns: A Dataframe of Possible % of moves remaining. A negative % means there is still a move and a Positive % means that it has either reversed or might reverse
+        '''
+        
+        df = NSE.open_nse_index(index, show_n=500)
+        atrs = {}
+        for name in df['symbol']:
+            try:
+                atrs[name] = In.get_ATR(In.open_downloaded_stock(name))
+            except:
+                atrs[name] = np.nan
+
+        df['ATR'] = atrs.values()
+        df.dropna(inplace=True)
+        
+        
+        df['remaining move %'] = df.apply(lambda row: round((max(abs(row['open'] - row['dayHigh']), abs(row['open'] - row['dayLow'])) - row['ATR']) / row['ATR'],2),axis=1)
+        
+        if possible_reversal:
+            df.sort_values('remaining move %', ascending=False, inplace=True)
+        else:
+            df.sort_values('remaining move %', ascending=True, inplace=True)
+            
+        return df
 
     
 class MarketSentiment:
