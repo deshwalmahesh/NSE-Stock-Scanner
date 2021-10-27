@@ -71,16 +71,17 @@ class IntraDay():
         return result
 
 
-    def NR7_strategy(self,name):
+    def NR_strategy(self,name, range_:int = 7):
         '''
-        If Current "DAILY" candle has the lowest Range ( High - Low) from the previous 6 candles, go SHORT on next ( 8th candle) if it breaks the low or go LONG if it breaks the high
+        If Current "DAILY" candle has the lowest Range ( High - Low) from the previous "N" candles, go SHORT on next ( 8th candle) if it breaks the low or go LONG if it breaks the high
         args:
             name: name of the stock
+            range_: Range to consider for previous days
         '''
         df = In.open_downloaded_stock(name)
 
         min_range = int(df.loc[0,'HIGH']  - df.loc[0,'LOW']) # Assume the smallest range is for current day
-        for index in df.index[1:7]:
+        for index in df.index[1:range_]:
             if (int(df.loc[index,'HIGH']  - df.loc[index,'LOW'])) <= min_range:
                 return False
         return True
@@ -104,7 +105,7 @@ class IntraDay():
         return whole.intersection(nr)
     
     
-    def prob_by_percent_change(self, symbol:str = None, index:int = 200, time_period:int = 60, change_percent:float = 0.1, sort_by:str = 'Long Probability', top_k:int = 5):
+    def prob_by_percent_change(self, symbol:list = None, index:int = 200, time_period:int = 60, change_percent:float = 0.1, sort_by:str = 'Long Probability', top_k:int = 5):
         '''
         Probability of a stock for acheiving "change %" for High / Low if you buy it at market price on the opening bell. Analysed on historical data of "time_period" days 
         It simply calculates that in the past "n" number of days, how mant times a stock achieved "x%" Long (Buy) or Short (Sell) if bought or sold on opening bell
@@ -118,7 +119,7 @@ class IntraDay():
         '''
         assert not (symbol and index), "Provide either 'symbol' or 'index'; not both"
         res = {}
-        data = In.data[f'nifty_{index}'] if not symbol else [symbol]
+        data = In.data[f'nifty_{index}'] if not symbol else symbol
         for name in data:
             df = In.open_downloaded_stock(name)
             high = 0

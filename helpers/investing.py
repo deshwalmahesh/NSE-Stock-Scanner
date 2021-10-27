@@ -176,7 +176,7 @@ class Investing(AnalyseStocks):
         return pic
         
         
-    def get_particulars(self, name, budget:float, risk:float, risk_to_reward_ratio:float=2.5, entry:float=None, stop_loss:float=None, Low:str = 'LOW', High:str = 'HIGH', delta:float = 0.001, plot_candle:bool = False):
+    def get_particulars(self, name, budget:float, risk:float, risk_to_reward_ratio:float=2, leverage:float = 1, entry:float=None, stop_loss:float=None, Low:str = 'LOW', High:str = 'HIGH', delta:float = 0.001, plot_candle:bool = False):
         '''
         Display the particulars of a trade before buying
         args:
@@ -184,14 +184,18 @@ class Investing(AnalyseStocks):
             risk: How much loss you can survive at the end of day PER TRADE. Total capacity will be No of shares * per share loss capacity
             risk_to_reward_ratio: How much profit you want to have. It is twice of loss_capacity per share for 44 Moving average
             budget : How much you have for investing purpose
+            leverage: If day trading, it is mostly 4 or 5 but for long time, there is no leverage given
             Low: Column name which describes LOW of the previous trade
             High =  Column name which describes High of the previous trade
             entry: Manual Entry price price. Might be due to a support or Resistance lebvel or something else
             stop_loss: Manual stop_loss
             delta: A min amount above which you'll buy
             plot_candle: Plot the candlestick for the stock
-        '''   
+        '''  
+        budget = budget * leverage 
+
         df = self.open_downloaded_stock(name)
+        
         if risk_to_reward_ratio > 2:
             warnings.warn(f"Don't be greedy with risk to reward ratio of {risk_to_reward_ratio}. Stick to system")
 

@@ -71,16 +71,17 @@ class IntraDay():
         return result
 
 
-    def NR7_strategy(self,name):
+    def NR_strategy(self,name, range_:int = 7):
         '''
-        If Current "DAILY" candle has the lowest Range ( High - Low) from the previous 6 candles, go SHORT on next ( 8th candle) if it breaks the low or go LONG if it breaks the high
+        If Current "DAILY" candle has the lowest Range ( High - Low) from the previous "N" candles, go SHORT on next ( 8th candle) if it breaks the low or go LONG if it breaks the high
         args:
             name: name of the stock
+            range_: Range to consider for previous days
         '''
         df = In.open_downloaded_stock(name)
 
         min_range = int(df.loc[0,'HIGH']  - df.loc[0,'LOW']) # Assume the smallest range is for current day
-        for index in df.index[1:7]:
+        for index in df.index[1:range_]:
             if (int(df.loc[index,'HIGH']  - df.loc[index,'LOW'])) <= min_range:
                 return False
         return True

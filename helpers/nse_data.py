@@ -10,7 +10,7 @@ class NSEData:
     '''
     Class to open NSE data
     '''
-    def __init__(self):
+    def __init__(self,):
         '''
         '''
         self.baseurl = "https://www.nseindia.com/"
@@ -50,12 +50,13 @@ class NSEData:
         return df.iloc[:show_n,[1,5,0,4]]
     
     
-    def open_nse_index(self,index_name:str,show_n:int=10):
+    def open_nse_index(self,index_name:str,show_n:int=10, drop_index:bool = True):
         '''
         Open the current index. DataFrame with all the members of the index and theit respective Open, High, Low, Percentange chnge etc etc
         args:
             index_name: Name of the Index such as NIFTY 50, NIFTY Bank, NIFTY-IT etc
             show_n: Show top N sorted by ABSOLUTE % change Values such that -3.2 will be shown first than 2.3
+            driop_index: Whether to drop the Index Value row itsels
         '''
         index_name = index_name.replace(' ','%20')
         index_name = index_name.replace(':','%3A')
@@ -70,8 +71,24 @@ class NSEData:
         df['absolute_change'] = df['pChange'].apply(lambda x: abs(x))
         # df['Index'] = df['symbol'].apply(lambda x: In.get_index(x))
         df.sort_values('absolute_change',ascending=False, inplace=True)
-        df.drop(0,inplace = True) # Drop the index name
+        
+        if drop_index: df.drop(0,inplace = True) # Drop the index name
         return df.iloc[:show_n,[1,9,3,4,5,6,-1]]
+        
+
+    def get_VIX(self, whole_data:bool = False):
+        '''
+        Get the Volatility Index Value. 
+        Read more at: 
+        https://tradebrains.in/india-vix/
+        https://www.motilaloswal.com/blog-details/6-things-that-the-Volatility-Index-(VIX)-indicates-to-you../1929
+        args:
+            whole_data: Get the Whole Current +  historical data of VIX
+        '''
+        result = self.get_live_nse_data('https://www1.nseindia.com/live_market/dynaContent/live_watch/VixDetails.json').json()
+        if whole_data:
+            return result
+        print(f"Current VIX: {result['currentVixSnapShot'][0]['CURRENT_PRICE']}")
 
 
     def fifty_days_data(self, symbol:str):
