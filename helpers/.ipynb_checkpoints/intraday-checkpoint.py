@@ -105,7 +105,7 @@ class IntraDay():
         return whole.intersection(nr)
     
     
-    def prob_by_percent_change(self, symbol:str = None, index:int = 200, time_period:int = 60, change_percent:float = 0.1, sort_by:str = 'Long Probability', top_k:int = 5):
+    def prob_by_percent_change(self, symbol:list = None, index:int = 200, time_period:int = 60, change_percent:float = 0.1, sort_by:str = 'Long Probability', top_k:int = 5):
         '''
         Probability of a stock for acheiving "change %" for High / Low if you buy it at market price on the opening bell. Analysed on historical data of "time_period" days 
         It simply calculates that in the past "n" number of days, how mant times a stock achieved "x%" Long (Buy) or Short (Sell) if bought or sold on opening bell
@@ -119,7 +119,7 @@ class IntraDay():
         '''
         assert not (symbol and index), "Provide either 'symbol' or 'index'; not both"
         res = {}
-        data = In.data[f'nifty_{index}'] if not symbol else [symbol]
+        data = In.data[f'nifty_{index}'] if not symbol else symbol
         for name in data:
             df = In.open_downloaded_stock(name)
             high = 0
@@ -165,75 +165,3 @@ class IntraDay():
             df.sort_values('remaining move %', ascending=True, inplace=True)
             
         return df
-
-    
-class MarketSentiment:
-    '''
-    Get the market sentiment based on TICK, TRIN etc
-    '''
-    def check_fresh_data(self):
-        '''
-        Get fresh updated data scraped from the website https://www.traderscockpit.com/?pageView=live-nse-advance-decline-ratio-chart
-        '''
-        page = requests.get('https://www.traderscockpit.com/?pageView=live-nse-advance-decline-ratio-chart')
-        soup = BeautifulSoup(page.content, "lxml")
-        latest_updated_on = soup.find("span", {"class": "hm-time"})
-        divs = soup.find_all("div", {"class": "col-sm-6"})
-        return divs, latest_updated_on
-    
-    
-    def get_TRIN(self, divs):
-        '''
-        Get the TRIN or so called Arm's Index of the market at any given point of time. Gives the market sentiment along with TICK. TRIN < 1 is Bullishh and  TRIN > 1 is bearish.
-        Values below 0.5 or greater than 3 shows Overbought and Oversold zone respectively. Check: https://www.investopedia.com/terms/a/arms.asp
-        args:
-            divs: Div elements scraped from website
-        returns:
-             dictonary of volume in Millions of shares for inclining or declining stocks along with the TRIN value
-        '''
-        self.volume_up = float(divs[4].text[1:-1])
-        self.volume_down = float(divs[5].text[1:-1])
-        
-        self.trin = float(divs[3].find('h4').text.split(' ')[-1].split(':')[-1][:-1])
-        return {'Volume Up':self.volume_up, 'Volume Down': self.volume_down, 'TRIN': self.trin}
-    
-    
-    def get_TICK(self, divs):
-        '''
-        Get the TICK data for live market. TICK is the difference between the gaining stocks and losing stocks at any point in time. Show nmarket sentiment and health along with TRIN.           Buy/ Long Position if TRIN is > 0; sell/short otherwise
-        args:
-            divs: BeautifulSoup object of all the div elements.
-        returns: Dictonary showing stocks which are up/ down corresponding to LAST tick traded value along with the differene betwwn no of stocks and no of stocks down
-        '''
-        self.stock_up = int(divs[1].text.split(' ')[-1][:-1])
-        self.stock_down = int(divs[2].text.split(' ')[-1][:-1])
-
-        self.tick = self.stock_up - self.stock_down
-        return {'Up':self.stock_up, "Down":self.stock_down, 'TICK':self.tick}
-    
-    
-    def get_high_low(self, divs):
-        '''
-        Get no of stocks trading at 52 Week high or 52 week low at any given point of time
-        args:
-            divs: BeautifulSoup object of all the div elements
-        returns: Dictonary of no of stocks trading at high and low
-        '''  
-        high = int(divs[7].find('p').text.split(' ')[-1])
-        low = int(divs[8].find('p').text.split(' ')[-1])
-
-        return {'52W High':high, "52W Low":low}
-
-    
-    def get_live_sentiment(self):
-        '''
-        Get the live sentiment of market based on TICK and TRIN
-        '''
-        result = {}
-        divs, latest_updated_on = self.check_fresh_data()
-        
-        result['Latest Updated on'] =  latest_updated_on.text[7:]
-        result.update(self.get_TICK(divs))
-        result.update(self.get_TRIN(divs))
-        result.update(self.get_high_low(divs))
-        return result

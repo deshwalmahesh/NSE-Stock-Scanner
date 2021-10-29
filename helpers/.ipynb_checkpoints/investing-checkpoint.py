@@ -18,6 +18,22 @@ class Investing(AnalyseStocks):
         self.picked = None
         self._old_budget = -1
         self.diff = -1
+        
+        
+        
+    def stock_current_index_performance(self,symbol:str):
+        '''
+        Returnns the live index value of a symbol for all the indices Nifty, Sectoral, Thematic in which the stock exists
+        args:
+            symbol: Name of the Stock listed on NSE
+        '''
+        indices = self.get_index(symbol,'all')
+        if len(indices):
+            indices = [x.upper() for x in indices]
+            df = NSE.current_indices_status(999)
+            if len(df)
+                return df[df['index'].isin(indices)]
+            print(f"{symbol} does not belong in any of the Nifty, Sectoral and Thematic Indices")
       
 
     def _get_all_ichi(self,budget:float, index:str='nifty_500', refit = False):
@@ -86,6 +102,9 @@ class Investing(AnalyseStocks):
         atr = []
         rsi = []
         near_52 = []
+        macd_signal = []
+        cci_value = []
+        adx = []
         
         for key in keys:
             try:
@@ -104,6 +123,9 @@ class Investing(AnalyseStocks):
                 rsi.append(self.get_RSI(df))
                 atr.append(self.get_ATR(df))
                 near_52.append(self.near_52(df))
+                macd_signal.append(self.macd_signal(df))
+                cci_value.append(self.get_CCI(df,signal_only=False, return_df=False))
+                adx.append(self.get_ADX(df))
                 
                 
         columns = df.columns
@@ -111,9 +133,13 @@ class Investing(AnalyseStocks):
         df = df.merge(pd.DataFrame({'SYMBOL':self._eligible.keys(), 'Diff':self._eligible.values()}),on='SYMBOL')
         
         # df['Rising'] = df['SYMBOL'].apply(lambda x: self.rising[x]) # Get Rising or Falling
+        df['CCI Value'] = cci_value
+        df['RSI Value'] = rsi
+        df['MACD Signal'] = macd_signal
+        df['ADX'] = adx
         df['Direction'] = near_52
         df['Ichi'] = df['SYMBOL'].apply(lambda x: ichi[x] if ichi.get(x) else 0)
-        df['RSI'] = rsi
+        
         df['ATR'] = atr
         
         df['Triple Candle'] = three_can
@@ -139,7 +165,7 @@ class Investing(AnalyseStocks):
             Close: Column Name which shows last closing price
             delta: Value above the Last Highest Traded Price
             nifty: nifty index to consider
-            diff: MAx Allowed Difference between Line and the Price
+            diff: MAx Allowed Difference between Line and the Price. diff is the %  of the Recent Closing Price
         '''
         self.picked = self.calculate(budget, High, Close, delta, nifty = nifty, diff = diff, show_only = False)
         
@@ -166,7 +192,7 @@ class Investing(AnalyseStocks):
         return pic
         
         
-    def get_particulars(self, name, budget:float, risk:float, risk_to_reward_ratio:float=1.999, entry:float=None, stop_loss:float=None, Low:str = 'LOW', High:str = 'HIGH', delta:float = 0.001, plot_candle:bool = False):
+    def get_particulars(self, name, budget:float, risk:float, risk_to_reward_ratio:float=2, leverage:float = 1, entry:float=None, stop_loss:float=None, Low:str = 'LOW', High:str = 'HIGH', delta:float = 0.001, plot_candle:bool = False):
         '''
         Display the particulars of a trade before buying
         args:
@@ -174,14 +200,18 @@ class Investing(AnalyseStocks):
             risk: How much loss you can survive at the end of day PER TRADE. Total capacity will be No of shares * per share loss capacity
             risk_to_reward_ratio: How much profit you want to have. It is twice of loss_capacity per share for 44 Moving average
             budget : How much you have for investing purpose
+            leverage: If day trading, it is mostly 4 or 5 but for long time, there is no leverage given
             Low: Column name which describes LOW of the previous trade
             High =  Column name which describes High of the previous trade
             entry: Manual Entry price price. Might be due to a support or Resistance lebvel or something else
             stop_loss: Manual stop_loss
             delta: A min amount above which you'll buy
             plot_candle: Plot the candlestick for the stock
-        '''   
+        '''  
+        budget = budget * leverage 
+
         df = self.open_downloaded_stock(name)
+        
         if risk_to_reward_ratio > 2:
             warnings.warn(f"Don't be greedy with risk to reward ratio of {risk_to_reward_ratio}. Stick to system")
 
@@ -207,6 +237,7 @@ class Investing(AnalyseStocks):
         profit = risk_to_reward_ratio * diff
         profit_perc = round((profit/entry)*100,2)
         target = round(entry + profit,2)
+        investment = entry * quantity
         
         
         if plot_candle:
@@ -217,7 +248,7 @@ class Investing(AnalyseStocks):
             warnings.warn(f"Risk should be atleast {r} for you to afford {name}")
             return None
             
-        return {'Buying Price':round(entry,2),'Stop-Loss %': stop_loss_perc,'Target %':profit_perc,'Quantity':quantity,'Stop-Loss Price':stop_loss,'Trigger Price':target,
+        return {'Buying Price':round(entry,2),'Stop-Loss %': stop_loss_perc,'Target %':profit_perc,'Quantity':quantity,'Stop-Loss Price':stop_loss,'Trigger Price':target,'investment_required':investment,
                 'Risk Per Share':round(diff,2),'Profit Per Share':round(profit,2),'Max loss on this config':round(quantity*diff,2),
-                'Max Gain on this config': round(quantity*profit,2),'Price To Profit Ratio': round(entry / (diff*2 ),2), 'Index':self.get_index(name),}
+                'Max Gain on this config': round(quantity*profit,2), 'Index':self.get_index(name, 'all'),}
     

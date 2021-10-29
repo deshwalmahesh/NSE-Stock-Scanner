@@ -18,6 +18,22 @@ class Investing(AnalyseStocks):
         self.picked = None
         self._old_budget = -1
         self.diff = -1
+        
+        
+        
+    def stock_current_index_performance(self,symbol:str):
+        '''
+        Returnns the live index value of a symbol for all the indices Nifty, Sectoral, Thematic in which the stock exists
+        args:
+            symbol: Name of the Stock listed on NSE
+        '''
+        indices = self.get_index(symbol,'all')
+        if len(indices):
+            indices = [x.upper() for x in indices]
+            df = NSE.current_indices_status(999)
+            if len(df)
+                return df[df['index'].isin(indices)]
+            print(f"{symbol} does not belong in any of the Nifty, Sectoral and Thematic Indices")
       
 
     def _get_all_ichi(self,budget:float, index:str='nifty_500', refit = False):
