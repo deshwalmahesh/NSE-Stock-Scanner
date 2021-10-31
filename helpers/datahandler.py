@@ -147,10 +147,10 @@ class DataHandler:
         args:
             name: ID of the stock given
         '''
-        return stock_df(symbol=name, from_date = self.present - timedelta(days = 1000), to_date = self.present, series="EQ").drop(drop,axis=1)
+        return stock_df(symbol=name, from_date = self.present - timedelta(days = 750), to_date = self.present, series="EQ").drop(drop,axis=1) # almost 2 years
     
     
-    def open_downloaded_stock(self, name:str):
+    def open_downloaded_stock(self, name:str, resample:str = None):
         '''
         Open the Individual stock based on it's Official Term
         args:
@@ -159,7 +159,22 @@ class DataHandler:
         '''
         df = pd.read_csv(join(self.data_path,self.all_stocks[name]))
         df['DATE'] = pd.to_datetime(df['DATE'])
+        
+        if resample:
+            df = self.resample_data(df,resample)
         return df
+
+    
+    def resample_data(self, data, to:str  = 'W', names:tuple = ('OPEN','CLOSE','LOW','HIGH','DATE')):
+        '''
+        Resample the data from Daily to Weekly, Monthly or Yearly
+        args:
+            data: Dataframe of Daily data
+            to: One of  ['W','M','Y']
+        '''
+        Open, Close, Low, High, Date = names
+        data = data.resample(to,on=Date).agg({Open:'first', High:'max', Low: 'min', Close:'last'})
+        return data.sort_index(ascending = False)
     
 
     def download_new(self,name:str, path:str = "./data"):
@@ -229,6 +244,9 @@ class DataHandler:
             self.data['all_stocks'][key] = file
 
         self.update_data(self.data)
+
+    
+
 
 
 
