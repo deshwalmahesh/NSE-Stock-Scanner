@@ -155,11 +155,12 @@ class DataHandler:
         Open the Individual stock based on it's Official Term
         args:
             name: Name / ID given to the stock. Example, Infosys is "INFY"
+            resample: Resample the data to Weekly, Monthly, Yearly. Pass in ['M','W','Y']. Default: None means Daily
         returns: DataFrame of that stock
         '''
         df = pd.read_csv(join(self.data_path,self.all_stocks[name]))
         df['DATE'] = pd.to_datetime(df['DATE'])
-        
+
         if resample:
             df = self.resample_data(df,resample)
         return df
@@ -174,7 +175,7 @@ class DataHandler:
         '''
         Open, Close, Low, High, Date = names
         data = data.resample(to,on=Date).agg({Open:'first', High:'max', Low: 'min', Close:'last'})
-        return data.sort_index(ascending = False)
+        return data.sort_index(ascending = False).reset_index()
     
 
     def download_new(self,name:str, path:str = "./data"):

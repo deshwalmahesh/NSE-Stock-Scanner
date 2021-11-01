@@ -165,3 +165,40 @@ class IntraDay():
             df.sort_values('remaining move %', ascending=True, inplace=True)
             
         return df
+    
+    
+    def get_quantity(self, name, position:str, budget:float, risk:float, entry:float, stop_loss:float, expected_target:float, risk_to_reward_ratio:float=2, leverage:float = 5):
+        '''
+        Get the quantity to Buy / Sell given your Budget, Amount you are willing to risk, Your leverage etc
+        args:
+            name: Name of the stock
+            position: Long (buy) or Short (Sell). Must be  long or short
+            budget: Actual Budget you have
+            leverage: Given by the bri=oker. Mostly it is 4 or 5
+            risk: Maximum risk you can have on this trade
+            entry: Entry Value
+            expected_target: Target you are expecting. Might be a trend line or a major resistance area or Fibonachi level
+            stop_loss: Max allowable price to reach in case market goes against you
+            risk_to_reward_ratio: Amount you sre willing to make against the Risk. Usually 2 or 3 in intraday
+        '''
+        if risk > 0.03 * budget:
+            print('Risk More than 3% of Capital. Don not take the trade')
+            return None
+        
+        budget = budget * leverage
+        diff = entry - stop_loss if position == 'long' else stop_loss - entry
+        quantity = risk / diff 
+        profit = risk_to_reward_ratio * diff
+        target = entry + profit if position == 'long' else entry - profit
+        
+        if (target > expected_target) and position == 'long':
+            print(f"Expected Target can't be reached with {risk_to_reward_ratio} Risk-to-Reward. Might not be a good Trade")
+            return None
+            
+        if (target < expected_target) and position == 'short':
+            print(f"Expected Target can't be reached with a Risk-to-Reward ratio of {risk_to_reward_ratio}. Might not be a good Trade")
+            return None
+        
+        return {'quantity':quantity,'target':target}
+        
+        

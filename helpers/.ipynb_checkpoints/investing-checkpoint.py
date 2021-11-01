@@ -31,7 +31,7 @@ class Investing(AnalyseStocks):
         if len(indices):
             indices = [x.upper() for x in indices]
             df = NSE.current_indices_status(999)
-            if len(df)
+            if len(df):
                 return df[df['index'].isin(indices)]
             print(f"{symbol} does not belong in any of the Nifty, Sectoral and Thematic Indices")
       
