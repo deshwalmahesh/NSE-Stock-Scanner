@@ -200,5 +200,44 @@ class IntraDay():
             return None
         
         return {'quantity':quantity,'target':target}
+    
+
+class IntradayStockSelection():
+    '''
+    Class to help Intraday Stock Selection
+    Read more at: https://www.kotaksecurities.com/ksweb/intraday-trading/how-to-choose-stocks-for-intraday-trading
+    '''
+    
+    def stocks_attributes(self, stocks:[str,list], time_period:int) -> tuple:
+        '''
+        Stocks Attributes like Average Move % per day, Range, Standard Deviation (Volatility)
+        args:
+            stocks: Any list of valid NSE symbols or any of the ['nifty_50','nifty_100','nifty_200','all_stocks','f&o']
+            time_period: MAx Time period to consider
+        returns: Tuple of Dictonaries with Median values of Move, Ranges and Standard Deviation over the period
+        '''
+        mov = {}
+        ranges = {}
+        devs = {}
+
+        data = In.data[stocks] if stocks in ['nifty_50','nifty_100','nifty_200','nifty_500','all_stocks','f&o'] else stocks
+
+        for name in data:
+            df = In.open_downloaded_stock(name)
+            df = df.iloc[:time_period,:]
+            df.sort_index(ascending=False,inplace = True)
+            df.reset_index(inplace=True,drop=True)
+            cp = []
+            rng = []
+            close = []
+
+            for index in df.index.values.tolist()[1:]:
+                cp.append(abs(df.loc[index,'CLOSE'] - df.loc[index,'OPEN']) / df.loc[index-1,'CLOSE'])
+                rng.append(abs(df.loc[index,'HIGH'] - df.loc[index,'LOW']) / df.loc[index,'OPEN']) # mitigate gaps
+                close.append(df.loc[index,'CLOSE'])
+            mov[name] = np.median(cp)
+            ranges[name] = np.median(rng)
+            devs[name] = np.std(close)
+        return (mov,ranges,devs)
         
         

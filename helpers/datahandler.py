@@ -41,6 +41,16 @@ class DataHandler:
             self.__fresh()
             self.check_new_data_availability()
 
+    
+    def update_FnO(self):
+        '''
+        Update the newest Futures and Options Derivatives list
+        '''
+        r = NSE.get_live_nse_data('https://www1.nseindia.com/content/fo/fo_underlyinglist.htm')
+        df = pd.read_html(r.text)[3].iloc[5:]
+        self.data['f&o'] = df.iloc[:,1].values.tolist()
+        self.update_data(self.data)
+             
 
     def update_new_listings(self):
         '''
