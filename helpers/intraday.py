@@ -208,13 +208,14 @@ class IntradayStockSelection():
     Read more at: https://www.kotaksecurities.com/ksweb/intraday-trading/how-to-choose-stocks-for-intraday-trading
     '''
     
-    def stocks_attributes(self, stocks:[str,list], time_period:int) -> tuple:
+    def move_range_std(self, stocks:[str,list], time_period:int, return_df:bool = True) -> tuple:
         '''
         Stocks Attributes like Average Move % per day, Range, Standard Deviation (Volatility)
         args:
             stocks: Any list of valid NSE symbols or any of the ['nifty_50','nifty_100','nifty_200','all_stocks','f&o']
             time_period: MAx Time period to consider
-        returns: Tuple of Dictonaries with Median values of Move, Ranges and Standard Deviation over the period
+            return_df: whether to return a DataFrame
+        returns: Tuple of Dictonaries with Median values of Move, Ranges and Standard Deviation over the period OR a DataFrame
         '''
         mov = {}
         ranges = {}
@@ -232,12 +233,23 @@ class IntradayStockSelection():
             close = []
 
             for index in df.index.values.tolist()[1:]:
-                cp.append(abs(df.loc[index,'CLOSE'] - df.loc[index,'OPEN']) / df.loc[index-1,'CLOSE'])
+                cp.append(abs(df.loc[index,'CLOSE'] - df.loc[index,'OPEN']) / df.loc[index,'OPEN'] ) #df.loc[index-1,'CLOSE']) # Gives Day's Move. Less Diff -> More Dojis
                 rng.append(abs(df.loc[index,'HIGH'] - df.loc[index,'LOW']) / df.loc[index,'OPEN']) # mitigate gaps
                 close.append(df.loc[index,'CLOSE'])
+
             mov[name] = np.median(cp)
             ranges[name] = np.median(rng)
             devs[name] = np.std(close)
+
+        if return_df:
+            df = pd.DataFrame([mov,ranges,devs]).T
+
+            df.rename(columns = {0:'Move',1:'Range',2:'STD'},inplace = True)
+            df['Move'] = df['Move'].apply(lambda x: round(x*100, 1))
+            df['Range'] = df['Range'].apply(lambda x: round(x*100, 1))
+            df.sort_values(by = ['Move', 'Range'], ascending=[0,0], inplace = True)
+            return df
+
         return (mov,ranges,devs)
         
         

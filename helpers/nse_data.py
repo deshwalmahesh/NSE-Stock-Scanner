@@ -105,10 +105,19 @@ class NSEData:
 
         df = df.loc[:,["DATE","OPEN","HIGH","LOW","CLOSE","52W H","52W L","SYMBOL"]] # to match previous API's Columns and structure
         return df
+
+
+    def stocks_at_52W(self, direction:str = 'high' ):
+        '''
+        Get stocks trading currently at their 52W High / Low
+        args:
+            direction: direction of 52 Week. 'high', 'low'
+        '''
+        x = self.get_live_nse_data(f'https://www.nseindia.com/api/live-analysis-52Week?index={direction}')
+        return pd.concat([pd.DataFrame(x.json()['dataLtpGreater20']), pd.DataFrame(x.json()['dataLtpLess20'])],ignore_index = True)
+
     
     
-        
-        
 class MarketSentiment:
     '''
     Get the market sentiment based on TICK, TRIN etc
