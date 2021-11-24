@@ -1,5 +1,4 @@
 from datetime import datetime, time
-from os import PRIO_PROCESS
 from .investing import Investing
 from ta.trend import macd_diff
 import pandas as pd
