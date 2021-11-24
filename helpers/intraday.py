@@ -14,11 +14,12 @@ class IntraDay():
     Class for Intraday Screening of stocks
     '''
     
-    def whole_number_strategy(self,nifty:int=50, min_val:int=100, max_val:int=5000, return_list = False, print_results:bool = True):
+    def whole_number_strategy(self,nifty:int=500, filter_by:list = None, min_val:int=100, max_val:int=5000, return_list = False, print_results:bool = True):
         '''
         If Open == High or Low for a stock around 9:30, go long if Open == Low else go high only after 9:30 on 15 minutes candle
         args:
             nifty: Index to choose from File
+            filter_by: Show only those stocks
             min_val: Minimum value to consider
             return_list: Whether to return list or Dictonary
             max_val: Maximum value of stock price to consider
@@ -31,6 +32,10 @@ class IntraDay():
         
         url = f"https://www.nseindia.com/api/equity-stockIndices?index=NIFTY%20{nifty}"
         df = pd.DataFrame(NSE.get_live_nse_data(url).json()['data'])
+
+        if filter_by:
+            df = df[df['symbol'].isin(filter_by)]
+
 
         df['Equal'] = df.apply(lambda row: True if (row['open'] == row['dayHigh'] or row['open'] == row['dayLow']) else False, axis=1)
         df = df.loc[df["Equal"] == True,:]
