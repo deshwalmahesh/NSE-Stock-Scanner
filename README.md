@@ -98,6 +98,11 @@ Class to implement just the Buy and sell conditions. Some strategies already imp
 4. Stochastic
 5. Moving Average
 _____________________________________________________________________________
+**[Futures and Deratives](https://www.investopedia.com/terms/f/futures.asp)**: F&O basi support.
+1. List of available F&O
+2. [Option Chain Analysis](https://www.quora.com/How-do-I-read-analyse-the-option-chain-of-a-stock-to-intraday-trade-with-clarity-NSE). Useful for Swing as well as Intra Day Trading
+
+_________________________________________________________________________
 **Coming Next**:
 1. Optimization: Find optimal values for each individual stocks because give good results for 35 MA, some give for Stochastic strategy, some for breakout.. etc etc.
 2. Live real time data, if there is any api for free
