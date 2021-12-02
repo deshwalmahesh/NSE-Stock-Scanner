@@ -224,7 +224,8 @@ class IntradayStockSelection():
         '''
         mov = {}
         ranges = {}
-        devs = {}
+        ranges_abs = {}
+        devs = {} # standard deviation or so called volatility
 
         data = In.data[stocks] if stocks in ['nifty_50','nifty_100','nifty_200','nifty_500','all_stocks','f&o'] else stocks
 
@@ -236,23 +237,29 @@ class IntradayStockSelection():
             cp = []
             rng = []
             close = []
+            rng_abs = []
 
             for index in df.index.values.tolist()[1:]:
-                cp.append(abs(df.loc[index,'CLOSE'] - df.loc[index,'OPEN']) / df.loc[index,'OPEN'] ) #df.loc[index-1,'CLOSE']) # Gives Day's Move. Less Diff -> More Dojis
+                cp.append(abs(df.loc[index,'CLOSE'] - df.loc[index,'OPEN']) / df.loc[index,'OPEN'] ) # df.loc[index-1,'CLOSE']) # Gives Day's Move. Less Diff -> More Dojis
                 rng.append(abs(df.loc[index,'HIGH'] - df.loc[index,'LOW']) / df.loc[index,'OPEN']) # mitigate gaps
+                rng_abs.append(abs(df.loc[index,'HIGH'] - df.loc[index,'LOW']))
                 close.append(df.loc[index,'CLOSE'])
 
             mov[name] = np.median(cp)
             ranges[name] = np.median(rng)
-            devs[name] = np.std(close)
+            ranges_abs[name] = round(np.median(rng_abs),2)
+            devs[name] = round(np.std(close), 2)
 
         if return_df:
-            df = pd.DataFrame([mov,ranges,devs]).T
+            df = pd.DataFrame([mov,ranges,ranges_abs,devs]).T
 
-            df.rename(columns = {0:'Move',1:'Range',2:'STD'},inplace = True)
-            df['Move'] = df['Move'].apply(lambda x: round(x*100, 1))
-            df['Range'] = df['Range'].apply(lambda x: round(x*100, 1))
-            df.sort_values(by = ['Move', 'Range'], ascending=[0,0], inplace = True)
+            df.rename(columns = {0:'Move % (wrt OPEN)',1:'Range % (wrt OPEN)',2:"Range (in Rupees)",3:'STD (in Rupees)'},inplace = True)
+            df['Move % (wrt OPEN)'] = df['Move % (wrt OPEN)'].apply(lambda x: round(x*100, 1))
+            df['Range % (wrt OPEN)'] = df['Range % (wrt OPEN)'].apply(lambda x: round(x*100, 1))
+            df.sort_values(by = ['Move % (wrt OPEN)', 'Range % (wrt OPEN)'], ascending=[0,0], inplace = True)
+
+            df['ATR (14 Days)'] = df.index.map(lambda x: round(In.get_ATR(In.open_downloaded_stock(x)),2))
+            df['LTP (CLOSE in Rupees)'] = df.index.map(lambda x: round(In.open_downloaded_stock(x).loc[0,'CLOSE'],2))
             return df
 
         return (mov,ranges,devs)

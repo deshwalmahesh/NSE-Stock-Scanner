@@ -176,9 +176,11 @@ class MarketSentiment:
         return {'52W High':high, "52W Low":low}
 
     
-    def get_live_sentiment(self):
+    def get_live_sentiment(self, print_analysis:bool = True):
         '''
         Get the live sentiment of market based on TICK and TRIN
+        args:
+            print_analysis: Whether to print only the analysis
         '''
         result = {}
         divs, latest_updated_on = self.check_fresh_data()
@@ -187,6 +189,27 @@ class MarketSentiment:
         result.update(self.get_TICK(divs))
         result.update(self.get_TRIN(divs))
         result.update(self.get_high_low(divs))
+
+        if print_analysis:
+            tick = result['TICK']
+            trin = result['TRIN']
+            tick_sentiment = 'Bullish' if tick > 0 else "Bearish"
+            trin_sentiment = 'Bullish' if trin < 1 else "Bearish"
+            if trin > 3:
+                print(f'Currently Bearish but may reverse soon due to TRIN value {trin} > 3')
+
+            if trin < 0.5:
+                print(f'Currently Bullish but may reverse soon due to TRIN value {trin} < 0.5')
+
+            if tick < 0 and trin > 1:
+                print(f"Pure Bearish due to negative tick {tick} and TRIN {trin} > 1")
+
+            if tick > 0 and trin < 1:
+                print(f"Pure Bullish due to positive tick {tick} and TRIN {trin} < 1")
+
+            if (tick > 0 and trin > 1) or (tick < 0 and trin < 1):
+                print(f"Watch out as TICK {tick} {tick_sentiment} and TRIN {trin} {trin_sentiment} have opposite sentiments")
+
         return result
     
 
