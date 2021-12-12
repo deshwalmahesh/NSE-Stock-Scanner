@@ -16,7 +16,8 @@ _______________________________________________________________
 ## STOCK-SCANNING-TOOL:
 
 **Maybe India's first free offline tool to have it all such as: Scan stocks based on swing strategies, intraday strategies, candlestick patterns, Indicator values, Charts, backtesting and one of the few to add concept of Live Market Mood. 
-Now Supports Live market data too (Not tick by tick but in an interval as it is updated in NSE website) to give the market mood and sentiment at selected intervals**
+Now Supports Live market data too (Not tick by tick but in an interval as it is updated in NSE website) to give the market mood and sentiment at selected intervals. 
+Ebooks will be added as I read them and find useful**
 
 _______________________________________________________________
 ## Usage Steps: 
@@ -101,6 +102,10 @@ _____________________________________________________________________________
 **[Futures and Deratives](https://www.investopedia.com/terms/f/futures.asp)**: F&O basi support.
 1. List of available F&O
 2. [Option Chain Analysis](https://www.quora.com/How-do-I-read-analyse-the-option-chain-of-a-stock-to-intraday-trade-with-clarity-NSE). Useful for Swing as well as Intra Day Trading
+
+_________________________________________________________________________
+**Ebooks**: Annotations added as I've read the books
+1. [Trading in the zone](https://g.co/kgs/BSuHyC). Best book on psychology I could find till now. 
 
 _________________________________________________________________________
 **Coming Next**:
