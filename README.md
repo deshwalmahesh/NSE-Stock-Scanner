@@ -67,8 +67,9 @@ ________________________________________________________________________________
 Supports:
 1. Auto risk management: Entry ( Default is buy above above High and Stop-loss Below the lower of current close or prev close; can also be overridden), Target (default is based on 1:2), Expected Change (how much change you are expecting from it to give you a realistic measure)
 2. Risk Control and Management: (Whether you should buy the stocks or not based on your risk apetite and budget, it suggests you stocks)
-3. Breakout Support: Stocks which are in tight consolidation for the past `n` days within `x%` range of recent candle. Might breakout
-4. CCI
+3. Daily Pivot Points with CPR
+4. Breakout Support: Stocks which are in tight consolidation for the past `n` days within `x%` range of recent candle. Might breakout
+5. CCI
 6. MACD
 7. Stochastic
 8. Ichimoku Suggestion (Count out of 3 conditions: Lines Crossing or not, Chikou Lagging inside Prices or Not, Cloud Below the Price or Not)
@@ -106,6 +107,7 @@ _____________________________________________________________________________
 _________________________________________________________________________
 **Ebooks**: Annotations added as I've read the books
 1. [Trading in the zone](https://g.co/kgs/BSuHyC). Best book on psychology I could find till now. 
+2. [High Probability Trading](https://www.amazon.in/High-Probability-Trading-Marcel-Link/dp/0071381562) Good book on strategies
 
 _________________________________________________________________________
 **Coming Next**:
