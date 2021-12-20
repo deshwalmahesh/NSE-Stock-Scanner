@@ -14,7 +14,7 @@ class IntraDay():
     Class for Intraday Screening of stocks
     '''
     
-    def whole_number_strategy(self,nifty:int=500, filter_by:list = None, min_val:int=100, max_val:int=5000, return_list = False, print_results:bool = True):
+    def whole_number_strategy(self,nifty:int=50, filter_by:list = None, min_val:int=100, max_val:int=5000, return_list = False, print_results:bool = True, include_whole:bool = True):
         '''
         If Open == High or Low for a stock around 9:30, go long if Open == Low else go high only after 9:30 on 15 minutes candle
         args:
@@ -24,6 +24,7 @@ class IntraDay():
             return_list: Whether to return list or Dictonary
             max_val: Maximum value of stock price to consider
             print_results: Whether to print the results or not
+            include_whole: Whether to Include the XX.00 or not
         returns:
             Dictonary of tuples {"Long":[(name, Open, nifty Index), ...], "Short":[(name, Open, nifty Index), ...]}
         '''
@@ -39,8 +40,10 @@ class IntraDay():
 
         df['Equal'] = df.apply(lambda row: True if (row['open'] == row['dayHigh'] or row['open'] == row['dayLow']) else False, axis=1)
         df = df.loc[df["Equal"] == True,:]
-        df['Whole'] = df['open'].apply(lambda x:x.is_integer())
-        df = df.loc[df['Whole'] == True,:]
+
+        if include_whole:
+            df['Whole'] = df['open'].apply(lambda x:x.is_integer())
+            df = df.loc[df['Whole'] == True,:]
 
         for index in df.index:
             open_ = df.loc[index,'open']

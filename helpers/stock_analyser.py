@@ -534,31 +534,39 @@ class AnalyseStocks(DataHandler):
         return signal
 
 
-    def get_Pivot_Points(data, names:list=['OPEN','CLOSE','HIGH', 'LOW'] ):
+    def get_Pivot_Points(self, data, names:list = ['OPEN','CLOSE','HIGH', 'LOW'], cpr:bool = True):
         '''
-        Get 'Traditional Daily' Pivot Pointswith 3 support and 3 Resistance
+        Get 'Traditional Daily' Pivot Pointswith 3 support and 3 Resistance. Also it gives Central Pivot Line, Lower Boundary and Upper Boundary
         args:
             data: DataFrame of the stock
             names: Names of columns containing the values
+            boundries: Whether to add Central Pivot Range ( CPL, UB and LB )
         out:
-            Dictonary of 7 data points including 1 Pivot and 3 S-R each
+            Dictonary of 7 data points including 1 Pivot and 3 S-R each. 
         '''
         df = data.copy()
+
         if df.iloc[0,0] < df.iloc[1,0]: # If data is in reverse order, sort again because We want the dat for recent
             df.sort_index(ascending=False, inplace = True)
         
         open , close, high , low = df.loc[0, names].values
 
-        piv = (high + low + close) / 3
-        r1 = (2 * piv) - low
-        r2 = piv + (high  - low)
-        r3 = r1 + (high  - low)
-        s1 = (2 * piv) - high
-        s2 = piv - ( high  - low)
-        s3 = s1 - (high - low)
+        piv = round((high + low + close) / 3, 2)
+        r1 = round((2 * piv) - low, 2)
+        r2 = round(piv + (high  - low),2)
+        r3 = round(r1 + (high  - low),2)
+        s1 = round((2 * piv) - high,2)
+        s2 = round(piv - ( high  - low),2)
+        s3 = round(s1 - (high - low),2)
 
-        return {'Pivot':piv,'S-1':s1,'R-1':r1,'S-2':s2,'R-2':r2,'S-3':s3,'R-3':r3}
+        result = {'Pivot':piv,'S-1':s1,'R-1':r1,'S-2':s2,'R-2':r2,'S-3':s3,'R-3':r3}
 
+        if cpr:
+            result['CPL'] = round((high + low + close)/3, 2)
+            result['LB'] = round((high + low) / 2, 2)
+            result['UB'] = round(2 * result['CPL'] - result['LB'], 2)
+        
+        return result
 
 
     def get_recent_info(self, nifty:int=200, custom_list:tuple = None, col_names:tuple = ('DATE','OPEN','CLOSE','LOW','HIGH'), **kwargs):
