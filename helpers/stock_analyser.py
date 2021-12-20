@@ -534,6 +534,33 @@ class AnalyseStocks(DataHandler):
         return signal
 
 
+    def get_Pivot_Points(data, names:list=['OPEN','CLOSE','HIGH', 'LOW'] ):
+        '''
+        Get 'Traditional Daily' Pivot Pointswith 3 support and 3 Resistance
+        args:
+            data: DataFrame of the stock
+            names: Names of columns containing the values
+        out:
+            Dictonary of 7 data points including 1 Pivot and 3 S-R each
+        '''
+        df = data.copy()
+        if df.iloc[0,0] < df.iloc[1,0]: # If data is in reverse order, sort again because We want the dat for recent
+            df.sort_index(ascending=False, inplace = True)
+        
+        open , close, high , low = df.loc[0, names].values
+
+        piv = (high + low + close) / 3
+        r1 = (2 * piv) - low
+        r2 = piv + (high  - low)
+        r3 = r1 + (high  - low)
+        s1 = (2 * piv) - high
+        s2 = piv - ( high  - low)
+        s3 = s1 - (high - low)
+
+        return {'Pivot':piv,'S-1':s1,'R-1':r1,'S-2':s2,'R-2':r2,'S-3':s3,'R-3':r3}
+
+
+
     def get_recent_info(self, nifty:int=200, custom_list:tuple = None, col_names:tuple = ('DATE','OPEN','CLOSE','LOW','HIGH'), **kwargs):
         '''
         Get Recent Info for all of the stocks and sort them accordingaly

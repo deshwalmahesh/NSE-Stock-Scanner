@@ -8,7 +8,7 @@ from .nse_data import NSEData
 NSE = NSEData()
 
 
-def get_next_expiry_date(expiry_type:str = 'weekly'):
+def get_next_expiry_date(expiry_type:str = 'monthly'):
     '''
     Get Future and Options Expiry Contracts Date for the next 3 months from TODAY. 
     For Equity, it is on last Trursday of Month and for Nifty-BankNifty it is for Last Thursday of the Week UNTILL or UNLESS it is a Holiday
@@ -33,22 +33,23 @@ def get_next_expiry_date(expiry_type:str = 'weekly'):
     return expiry_dates
 
 
-def analyse_open_interest(symbol, compare_with:tuple = ('openInterest','changeinOpenInterest','totalTradedVolume'), expiry_dates:tuple = None, top_n:int = 5):
+def analyse_open_interest(symbol, compare_with:tuple = ('openInterest','changeinOpenInterest','totalTradedVolume','change'), expiry_dates:tuple = None, top_n:int = 5, expiry_type:str = 'monthly'):
     '''
     Get the Option Chain's Open Interest for analysis. You can read more about it at: https://www.quora.com/How-do-I-read-analyse-the-option-chain-of-a-stock-to-intraday-trade-with-clarity-NSE
     args:
         symbol: NSE Symbol or any Index from the three ['NIFTY','BANKNIFTY','FINNIFTY']
         compare_with: Comapre the Puts Aginst this value. Select From ['openInterest', 'changeinOpenInterest', 'pchangeinOpenInterest','totalTradedVolume', 'totalBuyQuantity', 'totalSellQuantity']
-        expiry_dates: List of Expiry dates: in format such as: '29-Nov-2021'. Run FnO.get_next_expiry_date() to get a list of next expiry dates. If None, Nearest Date is used
+        expiry_dates: List of Expiry dates: In ORDER with format such as: '29-Nov-2021'. Run FnO.get_next_expiry_date() to get a list of next expiry dates. If None, Nearest Date is used
         top_n: How many top values, EACH of Calls and Put to return
-    '''
+        expiry_type: Monthly (for equity and indoces both) or Weekly (for indices only) if in case there is no expiry_dates set
+    ''' 
     if symbol in ['NIFTY','BANKNIFTY','FINNIFTY']:
         url = f"https://www.nseindia.com/api/option-chain-indices?symbol={symbol}"
     else:
         url = f'https://www.nseindia.com/api/option-chain-equities?symbol={symbol}'
     
     df_data = {'contract_type':[],'expiryDate': [],'strikePrice':[],'openInterest': [],'changeinOpenInterest': [],'pchangeinOpenInterest': [],'totalTradedVolume': [], 
-               'totalBuyQuantity': [], 'totalSellQuantity': []}
+               'totalBuyQuantity': [], 'totalSellQuantity': [], 'change':[]}
     keys = df_data.keys()
     
     r = NSE.get_live_nse_data(url).json()
@@ -67,11 +68,16 @@ def analyse_open_interest(symbol, compare_with:tuple = ('openInterest','changein
     df['expiry_date'] = df['expiry_date'].apply(lambda x:datetime.strptime(x, "%d-%b-%Y").strftime("%d-%b-%Y"))
     df['strike_price'] = df['strike_price'].apply(lambda x: int(x))
     df['absChangeOI'] = df['changeinOpenInterest'].apply(lambda x: abs(x))
+    df['absChange'] = df['change'].apply(lambda x: abs(x))
     
     # Get specific expiry date
     if not expiry_dates:
-        expiry_dates = (df['expiry_date'].min(),) # Single element tuple requires ,
+        recent_expiry = get_next_expiry_date()[0]
+        sup_plot_text_date = recent_expiry
+        expiry_dates = [recent_expiry] # Single element tuple requires ,
     else:
+        recent_expiry = expiry_dates[0]
+        sup_plot_text_date = 'All Available Expiries'
         expiry_dates = [datetime.strptime(x, "%d-%b-%Y").strftime("%d-%b-%Y") for x in expiry_dates]   
     df = df[df['expiry_date'].isin(expiry_dates)]
     
@@ -80,14 +86,18 @@ def analyse_open_interest(symbol, compare_with:tuple = ('openInterest','changein
     odd = length%2
     rows = (length//2) + 1 if odd else length//2
     f,ax = plt.subplots(rows,2,figsize = (25,10*rows))
-    f.suptitle(f"{symbol} Option Chain Analysis", y = 0.93, fontsize = 17, weight = 600, color = 'teal')
+    f.suptitle(f"{symbol} Option Chain Analysis | Expiry : {sup_plot_text_date}", y = 0.93, fontsize = 17, weight = 600, color = 'teal')
     ax = ax.ravel()
     for i,comp_with in enumerate(compare_with):
 
         ax[i].set_title(comp_with, pad = 13, fontweight = 500, color = 'blue',fontsize = 15)
 
-        if comp_with == 'changeinOpenInterest':
+        if comp_with == 'changeinOpenInterest': # change has to be depicted in + nd -
             topn_df = pd.concat([df[df['contract_type'] == 'Calls_CE'].nlargest(top_n, 'absChangeOI'),df[df['contract_type'] == 'Puts_PE'].nlargest(top_n, 'absChangeOI')])
+        
+        elif comp_with == 'change': # change has to be depicted in positive and negative
+            topn_df = pd.concat([df[df['contract_type'] == 'Calls_CE'].nlargest(top_n, 'absChange'),df[df['contract_type'] == 'Puts_PE'].nlargest(top_n, 'absChange')])
+
         else:
             topn_df = pd.concat([df[df['contract_type'] == 'Calls_CE'].nlargest(top_n, comp_with),df[df['contract_type'] == 'Puts_PE'].nlargest(top_n, comp_with)])
 

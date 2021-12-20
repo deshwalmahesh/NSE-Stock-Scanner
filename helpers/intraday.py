@@ -243,12 +243,11 @@ class IntradayStockSelection():
                 cp.append(abs(df.loc[index,'CLOSE'] - df.loc[index,'OPEN']) / df.loc[index,'OPEN'] ) # df.loc[index-1,'CLOSE']) # Gives Day's Move. Less Diff -> More Dojis
                 rng.append(abs(df.loc[index,'HIGH'] - df.loc[index,'LOW']) / df.loc[index,'OPEN']) # mitigate gaps
                 rng_abs.append(abs(df.loc[index,'HIGH'] - df.loc[index,'LOW']))
-                close.append(df.loc[index,'CLOSE'])
 
             mov[name] = np.median(cp)
             ranges[name] = np.median(rng)
             ranges_abs[name] = round(np.median(rng_abs),2)
-            devs[name] = round(np.std(close), 2)
+            devs[name] = round(df['CLOSE'].std(),2)
 
         if return_df:
             df = pd.DataFrame([mov,ranges,ranges_abs,devs]).T
