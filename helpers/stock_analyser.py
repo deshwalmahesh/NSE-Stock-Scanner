@@ -5,6 +5,7 @@ from .candlestick import *
 from ta.trend import ADXIndicator, macd_diff, cci
 from ta.volatility import average_true_range
 from .nse_data import NSEData
+import matplotlib.pyplot as plt
 
 CP = CandlePattern()
 NSE = NSEData()
@@ -534,39 +535,54 @@ class AnalyseStocks(DataHandler):
         return signal
 
 
-    def get_Pivot_Points(self, data, names:list = ['OPEN','CLOSE','HIGH', 'LOW'], cpr:bool = True):
+    def get_Pivot_Points(self, data, stock:str = None, names:list = ['OPEN','CLOSE','HIGH', 'LOW','DATE'], cpr:bool = True, num_days_back:int = 5, plot:bool = True):
         '''
         Get 'Traditional Daily' Pivot Pointswith 3 support and 3 Resistance. Also it gives Central Pivot Line, Lower Boundary and Upper Boundary
         args:
             data: DataFrame of the stock
             names: Names of columns containing the values
-            boundries: Whether to add Central Pivot Range ( CPL, UB and LB )
+            cpr: Whether to add Central Pivot Range ( CPL, UB and LB )
+            num_days_back: How many past days you want to analyse
+            plot: Whether to plot the S-R lines etc. Without candles
+
         out:
-            Dictonary of 7 data points including 1 Pivot and 3 S-R each. 
+            Dictonary of 'num_days_back' data  consisting 9 data points. 7 data points including 1 Pivot and 3 S-R each + 2 Upper and Lower Pivot Boundries
         '''
         df = data.copy()
 
         if df.iloc[0,0] < df.iloc[1,0]: # If data is in reverse order, sort again because We want the dat for recent
             df.sort_index(ascending=False, inplace = True)
         
-        open , close, high , low = df.loc[0, names].values
 
-        piv = round((high + low + close) / 3, 2)
-        r1 = round((2 * piv) - low, 2)
-        r2 = round(piv + (high  - low),2)
-        r3 = round(r1 + (high  - low),2)
-        s1 = round((2 * piv) - high,2)
-        s2 = round(piv - ( high  - low),2)
-        s3 = round(s1 - (high - low),2)
+        pivots = {}
+        for index in df.index[:num_days_back]:
+            open , close, high , low, DATE = df.loc[index, names].values
 
-        result = {'Pivot':piv,'S-1':s1,'R-1':r1,'S-2':s2,'R-2':r2,'S-3':s3,'R-3':r3}
+            if index == 0:
+                DATE = 'Next / Current Trading Day'
+            else:
+                DATE = df.loc[index-1, names[-1]].strftime("%d-%b-%Y")
 
-        if cpr:
-            result['CPL'] = round((high + low + close)/3, 2)
-            result['LB'] = round((high + low) / 2, 2)
-            result['UB'] = round(2 * result['CPL'] - result['LB'], 2)
+            piv = round((high + low + close) / 3, 2)
+            r1 = round((2 * piv) - low, 2)
+            r2 = round(piv + (high  - low),2)
+            r3 = round(r1 + (high  - low),2)
+            s1 = round((2 * piv) - high,2)
+            s2 = round(piv - ( high  - low),2)
+            s3 = round(s1 - (high - low),2)
+
+            result = {'Pivot':piv,'S-1':s1,'R-1':r1,'S-2':s2,'R-2':r2,'S-3':s3,'R-3':r3}
+
+            if cpr:
+                result['LB'] = round((high + low) / 2, 2)
+                result['UB'] = round(2 * result['Pivot'] - result['LB'], 2)
+            
+            pivots[DATE] = result
         
-        return result
+        if plot:
+            self._plot_pivot(df['SYMBOL'][0], pivots)
+
+        return pivots
 
 
     def get_recent_info(self, nifty:int=200, custom_list:tuple = None, col_names:tuple = ('DATE','OPEN','CLOSE','LOW','HIGH'), **kwargs):
@@ -687,7 +703,6 @@ class AnalyseStocks(DataHandler):
         return dict(sorted(result.items(), key = lambda x: x[1], reverse= True))
 
                      
-                     
     def plot_candlesticks(self,df, names = ('DATE','OPEN','CLOSE','LOW','HIGH'), mv:list = [44,100,200]):
         '''
         Plot a candlestick on a given dataframe
@@ -731,3 +746,38 @@ class AnalyseStocks(DataHandler):
 
         candle.update_yaxes(title_text = 'Price in Rupees', tickprefix = u"\u20B9" ) # Rupee symbol
         candle.show()
+
+
+    def _plot_pivot(self, name:str, piv_data, plot_size:tuple = (25,7)):
+        '''
+        Plot Pivot points with Pivot, Upper Bound, Lower Bound, Support-1, Resistance-1
+        args:
+            name: Name of the stock
+            pivot_data: Pivot data of the stock of the stock. If not given, it'll open the stock from downloaded and run 'get_Pivot_Points()` fun
+            num_days_back: Number of days data you want to visualise
+            chart_size: Size of the chart as (width, height)
+        '''
+        dates = list(piv_data.keys())[::-1]
+        dates.append("Day END")
+        piv_data["Day END"] = None
+        total = len(dates)
+
+        fig, ax = plt.subplots(figsize = plot_size)
+        plt.title(f'Pivot Plot for {name}',weight='bold',fontsize=15)
+
+        for i,key in enumerate(dates):
+            data = piv_data[key]
+
+            if i < total-1:
+                ax.hlines(y=data['UB'], xmin=key, xmax=dates[i+1], linewidth=1.5, color='red', linestyles = 'dotted')
+                ax.hlines(y=data['Pivot'], xmin=dates[i], xmax=dates[i+1], linewidth=2, color='black',)
+                ax.hlines(y=data['LB'], xmin=dates[i], xmax=dates[i+1], linewidth=1.5, color='green', linestyles = 'dotted',)
+
+                ax.hlines(y=data['S-1'], xmin=dates[i], xmax=dates[i+1], linewidth=2, color='green')
+                ax.hlines(y=data['R-1'], xmin=dates[i], xmax=dates[i+1], linewidth=2, color='red',)
+                
+                ax.axvline(x = dates[i], color = 'black', linestyle = 'dotted', linewidth = 1)
+            
+        ax.axvline(x = "Day END", color = 'black', linestyle = 'dotted', linewidth = 1)
+
+        plt.show()
