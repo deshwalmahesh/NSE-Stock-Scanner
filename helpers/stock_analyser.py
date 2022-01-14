@@ -769,7 +769,7 @@ class AnalyseStocks(DataHandler):
             data = piv_data[key]
 
             if i < total-1:
-                ax.hlines(y=data['UB'], xmin=key, xmax=dates[i+1], linewidth=1.5, color='red', linestyles = 'dotted')
+                ax.hlines(y=data['UB'], xmin=dates[i], xmax=dates[i+1], linewidth=1.5, color='red', linestyles = 'dotted')
                 ax.hlines(y=data['Pivot'], xmin=dates[i], xmax=dates[i+1], linewidth=2, color='black',)
                 ax.hlines(y=data['LB'], xmin=dates[i], xmax=dates[i+1], linewidth=1.5, color='green', linestyles = 'dotted',)
 
@@ -780,4 +780,15 @@ class AnalyseStocks(DataHandler):
             
         ax.axvline(x = "Day END", color = 'black', linestyle = 'dotted', linewidth = 1)
 
+        
+        i = 0 # Below block is just to plot legends for lines. A trick only
+        data = piv_data[dates[i]]
+        ax.hlines(y=data['UB'], xmin=dates[i], xmax=dates[i], linewidth=1.5, color='red', linestyles = 'dotted', label = 'Upper Bound')
+        ax.hlines(y=data['Pivot'], xmin=dates[i], xmax=dates[i], linewidth=2, color='black',label = 'Lower Bound')
+        ax.hlines(y=data['LB'], xmin=dates[i], xmax=dates[i], linewidth=1.5, color='green', linestyles = 'dotted',label = 'Pivot')
+
+        ax.hlines(y=data['S-1'], xmin=dates[i], xmax=dates[i], linewidth=2, color='green',label = 'Support 1')
+        ax.hlines(y=data['R-1'], xmin=dates[i], xmax=dates[i], linewidth=2, color='red', label = 'Resistance 1')
+            
+        plt.legend()
         plt.show()
