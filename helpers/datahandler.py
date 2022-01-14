@@ -160,20 +160,31 @@ class DataHandler:
         return stock_df(symbol=name, from_date = self.present - timedelta(days = 750), to_date = self.present, series="EQ").drop(drop,axis=1) # almost 2 years
     
     
-    def open_downloaded_stock(self, name:str, resample:str = None):
+    def open_downloaded_stock(self, name:str, resample:str = None, kind = 'daily'):
         '''
         Open the Individual stock based on it's Official Term
         args:
             name: Name / ID given to the stock. Example, Infosys is "INFY"
             resample: Resample the data to Weekly, Monthly, Yearly. Pass in ['M','W','Y']. Default: None means Daily
+            kind: Kind of data file to open" could be "daily" or any of [minutes_2, minutes_3, minutes_4, minutes_5, minutes_15, minutes_30, minutes_60]
         returns: DataFrame of that stock
         '''
-        df = pd.read_csv(join(self.data_path,self.all_stocks[name]))
-        df['DATE'] = pd.to_datetime(df['DATE'])
+        if kind == 'daily':
+            df = pd.read_csv(join(self.data_path,self.all_stocks[name]))
+            df['DATE'] = pd.to_datetime(df['DATE'])
 
-        if resample:
-            df = self.resample_data(df,resample)
-        return df
+            if resample:
+                df = self.resample_data(df,resample)
+            return df
+        
+        else:
+            file = f'./intraday_data/{kind}/{self.all_stocks[name]}'
+            try:
+                df = pd.read_csv(file)
+                df['DATE'] = pd.to_datetime(df['DATE'])
+                return df
+            except:
+                print(f"Unable to Open {file}. Check if there's a file in the corresponding directory")
 
     
     def resample_data(self, data, to:str  = 'W', names:tuple = ('OPEN','CLOSE','LOW','HIGH','DATE')):
@@ -193,7 +204,8 @@ class DataHandler:
         Download a New Stock Data
         args:
             name: ID / name of the Stock
-        '''
+            path: Path to the directory where downloaded files have to be stored
+         '''
         try:
             df = self.open_live_stock_data(name)
             df['DATE'] = pd.to_datetime(df['DATE'])
@@ -202,7 +214,6 @@ class DataHandler:
             df.to_csv(save,index=None)
         except Exception as e:
             print(name,'----',e)
-            pass
 
 
     def multiprocess_download_stocks(self,path:str = './data', worker:int=4):
