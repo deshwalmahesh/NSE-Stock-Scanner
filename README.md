@@ -1,3 +1,5 @@
+# 🔥 🔥 🔥 🔥 🔥 🔥 🔥 🔥 🔥 🔥 🔥 🔥 🔥 🔥 🔥 Now Supports Live 2-60 minutes data 🔥 🔥 🔥 🔥 🔥 🔥 🔥 🔥 🔥 🔥 🔥 🔥 🔥 🔥 🔥
+
 # Disclaimer:
 STOCK MARKET IS VERY RISKY UNTIL YOU DO IT PROPERLY. PLEASE DO NOT TAKE TRADES JUST BECAUSE THIS TOOL GIVES YOU THE NAME. APPLY YOUR OWN LEARNINGS, CREATE YOUR OWN STRATEGY, ASSESS RISK & TRADE THE PLAN.
 
@@ -15,8 +17,7 @@ I personally have lost some money in intraday without plan and own judgement. Th
 _______________________________________________________________
 ## STOCK-SCANNING-TOOL:
 
-**Maybe India's first free offline tool to have it all such as: Scan stocks based on swing strategies, intraday strategies, candlestick patterns, Indicator values, Charts, backtesting and one of the few to add concept of Live Market Mood. 
-Now Supports Live market data too (Not tick by tick but in an interval as it is updated in NSE website) to give the market mood and sentiment at selected intervals. 
+**India's first and only free open source tool to have it all such as: Live data, Scan stocks based on Swing / momentum strategies, intraday strategies, candlestick patterns, Indicator values, Charts, Backtesting, Online Broker Platform connection, ebooks, Risk management and one of the few to add concept of Live Market Mood. 
 Ebooks will be added as I read them and find useful**
 
 _______________________________________________________________
@@ -112,7 +113,7 @@ _________________________________________________________________________
 _________________________________________________________________________
 **Coming Next**:
 1. Optimization: Find optimal values for each individual stocks because give good results for 35 MA, some give for Stochastic strategy, some for breakout.. etc etc.
-2. Live real time data, if there is any api for free
+2. Algo Trading
 3. New Strategies and backtesting support
 
 ______________________________________________________________________________
