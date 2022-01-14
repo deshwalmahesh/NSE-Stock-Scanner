@@ -1,6 +1,7 @@
 from .datahandler import *
 from random import sample
 import plotly.graph_objects as go
+import plotly.io as pio
 from .candlestick import *
 from ta.trend import ADXIndicator, macd_diff, cci
 from ta.volatility import average_true_range
@@ -9,6 +10,7 @@ import matplotlib.pyplot as plt
 
 CP = CandlePattern()
 NSE = NSEData()
+pio.renderers.default = 'colab' 
 
 
 class AnalyseStocks(DataHandler):
@@ -703,25 +705,35 @@ class AnalyseStocks(DataHandler):
         return dict(sorted(result.items(), key = lambda x: x[1], reverse= True))
 
                      
-    def plot_candlesticks(self,df, names = ('DATE','OPEN','CLOSE','LOW','HIGH'), mv:list = [44,100,200]):
+    def _plot_candlesticks(self,df, names = ('DATE','OPEN','CLOSE','LOW','HIGH'), mv:list = [200], slider = False):
         '''
         Plot a candlestick on a given dataframe
         args:
             df: DataFrame
             names: Tuple of column names showing ('DATE','OPEN','CLOSE','LOW','HIGH')
             mv: Moving Averages
+            slider: Whether to have below zoom slider or not
         '''
         stocks = df.copy()
-        Date, Open, Close, Low, High = names
-        colors = sample(self.colors,len(mv))
         stocks.sort_index(ascending=False, inplace = True)  # Without reverse, recent rolling mean will be either NaN or equal to the exact value
-    
 
-        candle = go.Figure(data = [go.Candlestick(x = stocks[Date], name = 'Trade',
+        Date, Open, Close, Low, High = names
+
+        mv = [] if not mv else mv # just in case you don't want to have any moving averages
+        colors = sample(self.colors,len(mv))
+
+        
+        # To remove gaps in candles due to Non- Trading days
+        dt_all = pd.date_range(end=stocks.iloc[0,0],start=stocks.iloc[-1,0]) # starting DATE to END date present here
+        dt_obs = [d.strftime("%Y-%m-%d") for d in pd.to_datetime(stocks.DATE)]
+        non_trading_days = [d for d in dt_all.strftime("%Y-%m-%d").tolist() if not d in dt_obs]
+        
+
+        candle = go.Figure(data = [go.Candlestick(x = stocks[Date], name = 'X',
                                                        open = stocks[Open], 
                                                        high = stocks[High], 
                                                        low = stocks[Low], 
-                                                       close = stocks[Close]),])
+                                                       close = stocks[Close], opacity = 0.9),])
         for i in range(len(mv)):
             stocks[f'{str(mv[i])}-SMA'] = stocks[Close].rolling(mv[i], min_periods = 1).mean()
             candle.add_trace(go.Scatter(name=f'{str(mv[i])} MA',x=stocks[Date], y=stocks[f'{str(mv[i])}-SMA'], 
@@ -736,13 +748,14 @@ class AnalyseStocks(DataHandler):
                     dict(count = 6, label = '6M', step = 'month', stepmode = 'backward'),
                     dict(count = 1, label = 'YTD', step = 'year', stepmode = 'todate'),
                     dict(count = 1, label = '1Y', step = 'year', stepmode = 'backward'),
-                    dict(step = 'all')])))
+                    dict(step = 'all')])),
+                    rangebreaks=[dict(values=non_trading_days)])
 
-        candle.update_layout(autosize = False, width = 1400, height = 600,
+        candle.update_layout(autosize = False, width = 1400, height = 700,
                              title = {'text': f"{stocks['SYMBOL'][0]} | {self.all_stocks[stocks['SYMBOL'][0]]}",'y':0.97,'x':0.5,
                                       'xanchor': 'center','yanchor': 'top'},
                              margin=dict(l=30,r=30,b=30,t=30,pad=2),
-                             paper_bgcolor="lightsteelblue",)
+                             paper_bgcolor="lightsteelblue",xaxis_rangeslider_visible=slider)
 
         candle.update_yaxes(title_text = 'Price in Rupees', tickprefix = u"\u20B9" ) # Rupee symbol
         candle.show()
