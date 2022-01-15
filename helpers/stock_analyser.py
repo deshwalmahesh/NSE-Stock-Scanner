@@ -540,7 +540,7 @@ class AnalyseStocks(DataHandler):
         return signal
 
 
-    def get_Pivot_Points(self, data, stock:str = None, names:list = ['OPEN','CLOSE','HIGH', 'LOW','DATE'], cpr:bool = True, num_days_back:int = 5, plot:bool = True):
+    def get_Pivot_Points(self, data, names:list = ['OPEN','CLOSE','HIGH', 'LOW','DATE'], cpr:bool = True, num_days_back:int = 5, plot:bool = False):
         '''
         Get 'Traditional Daily' Pivot Pointswith 3 support and 3 Resistance. Also it gives Central Pivot Line, Lower Boundary and Upper Boundary
         args:
@@ -554,19 +554,19 @@ class AnalyseStocks(DataHandler):
             Dictonary of 'num_days_back' data  consisting 9 data points. 7 data points including 1 Pivot and 3 S-R each + 2 Upper and Lower Pivot Boundries
         '''
         df = data.copy()
-
+    
         if df.iloc[0,0] < df.iloc[1,0]: # If data is in reverse order, sort again because We want the dat for recent
             df.sort_index(ascending=False, inplace = True)
-        
-
+    
         pivots = {}
+        
         for index in df.index[:num_days_back]:
             open , close, high , low, DATE = df.loc[index, names].values
 
             if index == 0:
-                DATE = 'Next / Current Trading Day'
+                DATE = df.loc[0, names[-1]] + timedelta(days=1)
             else:
-                DATE = df.loc[index-1, names[-1]].strftime("%d-%b-%Y")
+                DATE = df.loc[index-1, names[-1]]
 
             piv = round((high + low + close) / 3, 2)
             r1 = round((2 * piv) - low, 2)
@@ -581,12 +581,12 @@ class AnalyseStocks(DataHandler):
             if cpr:
                 result['LB'] = round((high + low) / 2, 2)
                 result['UB'] = round(2 * result['Pivot'] - result['LB'], 2)
-            
+
             pivots[DATE] = result
         
         if plot:
-            PLT.plot_pivot(df['SYMBOL'][0], pivots)
-
+            PLT.pivot_plot(pivots,name = df.iloc[-1,-1])
+        
         return pivots
 
 

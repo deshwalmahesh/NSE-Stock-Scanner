@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from random import sample
 import json
+from datetime import timedelta
 
 pio.renderers.default = 'colab' 
 
@@ -24,7 +25,7 @@ class Plots():
         self.indices = {'nifty_50': 'Nifty 50','nifty_100':'Nifty 100','nifty_200':'Nifty 200','nifty_500':'Nifty 500'}
 
                      
-    def plot_candlesticks(self,df, names = ('DATE','OPEN','CLOSE','LOW','HIGH'), mv:list = [200], slider:bool = False, fig_size:bool = (1400,700)):
+    def plot_candlesticks(self,df, names = ('DATE','OPEN','CLOSE','LOW','HIGH'), mv:list = [200], slider:bool = False, fig_size:bool = (1400,700), plot:bool = True):
         '''
         Plot a candlestick on a given dataframe
         args:
@@ -33,10 +34,12 @@ class Plots():
             mv: Moving Averages
             slider: Whether to have below zoom slider or not
             fig_size: Size of Figure as (Width, Height)
+            plotting: Whether to plot the figure or just return the figure for firther modifications
         '''
         delta = df.iloc[0,0] - df.iloc[1,0]
         kind = 'day' if delta.days > 0 else 'intra'
         freq = int(delta.seconds / 60) if kind == 'intra' else None
+        candle_text = f"{str(freq)} Min" if freq else "Daily"
         
         stocks = df.copy()
         stocks.sort_index(ascending=False, inplace = True)  # Without reverse, recent rolling mean will be either NaN or equal to the exact value
@@ -62,7 +65,10 @@ class Plots():
 
         else:
             # grab first and last observations from df.date and make a continuous date range from that
-            dt_all = pd.date_range(start=stocks['DATE'].iloc[0],end=stocks['DATE'].iloc[-1], freq = f'{str(freq)}min')
+            start = stocks['DATE'].iloc[0] - timedelta(days=1)
+            end = stocks['DATE'].iloc[-1] + timedelta(days=1)
+
+            dt_all = pd.date_range(start=start,end=end, freq = f'{str(freq)}min')
             # check which dates from your source that also accur in the continuous date range
             dt_obs = [d.strftime("%Y-%m-%d %H:%M:%S") for d in stocks['DATE']]
             # isolate missing timestamps
@@ -90,16 +96,18 @@ class Plots():
 
 
         candle.update_layout(autosize = False, width = fig_size[0], height = fig_size[1],
-                             title = {'text': f"{stocks['SYMBOL'][0]} | {self.all_stocks[stocks['SYMBOL'][0]].split('_')[1]}",'y':0.97,'x':0.5,
+                             title = {'text': f"{stocks['SYMBOL'][0]} : {str(candle_text)} Candles | {self.all_stocks[stocks['SYMBOL'][0]].split('_')[1]}",'y':0.97,'x':0.5,
                                       'xanchor': 'center','yanchor': 'top'},
                              margin=dict(l=30,r=30,b=30,t=30,pad=2),
                              paper_bgcolor="lightsteelblue")
 
         candle.update_yaxes(title_text = 'Price in Rupees', tickprefix = u"\u20B9" ) # Rupee symbol
-        candle.show()
+        if plot:
+            candle.show()
+        return candle
 
 
-    def plot_pivot(self, name:str, piv_data, plot_size:tuple = (25,7)):
+    def _matplotlib_plot_pivot(self, pivot_data, name=None, plot_size:tuple = (25,7)):
         '''
         Plot Pivot points with Pivot, Upper Bound, Lower Bound, Support-1, Resistance-1
         args:
@@ -108,9 +116,12 @@ class Plots():
             num_days_back: Number of days data you want to visualise
             chart_size: Size of the chart as (width, height)
         '''
+        piv_data = pivot_data.copy()
+
         dates = list(piv_data.keys())[::-1]
-        dates.append("Day END")
-        piv_data["Day END"] = None
+        null_date = dates[-1] + timedelta(days=1)
+        dates.append(null_date)
+        piv_data[null_date] = None
         total = len(dates)
 
         fig, ax = plt.subplots(figsize = plot_size)
@@ -129,7 +140,7 @@ class Plots():
                 
                 ax.axvline(x = dates[i], color = 'black', linestyle = 'dotted', linewidth = 1)
             
-        ax.axvline(x = "Day END", color = 'black', linestyle = 'dotted', linewidth = 1)
+        ax.axvline(x = dates[i], color = 'black', linestyle = 'dotted', linewidth = 1)
 
         
         i = 0 # Below block is just to plot legends for lines. A trick only
@@ -143,6 +154,53 @@ class Plots():
             
         plt.legend()
         plt.show()
+
+
+    def pivot_plot(self,pivot_data, fig=None, name:str = None, fig_size:bool = (1000,600)):
+        '''
+        Plot Pivot points with Pivot, Upper Bound, Lower Bound, Support-1, Resistance-1
+        args:
+            name: Name of the stock
+            pivot_data: Pivot data of the stock of the stock. If not given, it'll open the stock from downloaded and run 'get_Pivot_Points()` fun
+            fig: Plotly Figure with Candlesticks data 
+            fig_size: Size of Figure as (Width, Height)
+            name: Name of stock
+        '''
+        piv_data = pivot_data.copy()
+        if not fig:
+            return self._matplotlib_plot_pivot(piv_data, name)
+
+        dates = list(piv_data.keys())[::-1]
+        null_date = dates[-1] + timedelta(days=1)
+        dates.append(null_date)
+        piv_data[null_date] = None
+        total = len(dates)
+
+        for i,key in enumerate(dates):
+            data = piv_data[key]
+
+            if i < total-1:
+                curr_date = dates[i]
+                next_date = dates[i+1]
+
+                fig.add_shape(type="line", x0=curr_date, x1=next_date, y0=data['UB'], y1=data['UB'],line_width=1.5, line_dash="dot", line_color="red") # Horizontal line
+                
+                fig.add_shape(type="line", x0=curr_date, x1=next_date, y0=data['Pivot'],  y1=data['Pivot'], line_width=2, line_color="black")
+                
+                
+                fig.add_shape(type="line", x0=curr_date, x1=next_date, y0=data['LB'],  y1=data['LB'], line_width=1.5, line_dash="dot", line_color="green") # Horizontal line
+
+                fig.add_shape(type="line", x0=curr_date, x1=next_date, y0=data['S-1'],  y1=data['S-1'], line_width=2, line_color="green") # Horizontal line
+                
+                
+                fig.add_shape(type="line", x0=curr_date, x1=next_date, y0=data['R-1'],  y1=data['R-1'], line_width=2, line_color="red") # Horizontal line
+
+                fig.add_vline(x=curr_date, line_width=1, line_dash="dot", line_color="black")
+
+        fig.add_vline(x=next_date, line_width=1, line_dash="dot", line_color="black")
+
+        fig.update_layout(autosize = False, width = fig_size[0], height = fig_size[1])
+        return fig
 
 
     def plot_Option_chain(self,symbol:str, df, compare_with, top_n:int, sup_plot_text_date: str, fig_size = (25,10)):
