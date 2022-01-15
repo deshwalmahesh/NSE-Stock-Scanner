@@ -70,11 +70,12 @@ class Investing(AnalyseStocks):
         return ['' if is_max.any() else 'background-color: #f7a8a8' for v in is_max]
     
     
-    def calculate(self, budget, High:str = 'HIGH', Close:str = 'CLOSE', delta:float = 1, nifty:str = 'nifty_200', diff = 13, show_only:bool=True):
+    def calculate(self, budget, custom_stocks:bool=False,High:str = 'HIGH', Close:str = 'CLOSE', delta:float = 1, nifty:str = 'nifty_200', diff = 13, show_only:bool=True, ):
         '''
         Pick Stocks based on all available and which are within your budget
         args:
             budget: Total available budget. Stocks under this budget will be considered only
+            custom_stocks: Whether to calculate for your custom stocks in place of nifty or something else
             High: Column name which show High
             Close: Column Name which shows last closing price
             delta: Value above the Last Highest Traded Price
@@ -89,11 +90,14 @@ class Investing(AnalyseStocks):
         
         if (not self._eligible) or refit:
             self._eligible  = self.update_eligible(limit = diff)
-            
-        keys = set(self._eligible.keys()).intersection(set(self.data[nifty])) if nifty else list(self._eligible.keys()) 
-        if not len(keys):
-            warnings.warn('No matching Stocks Found. Increase Distance or Nifty Index')
-            return None
+        
+        if not custom_stocks: 
+            keys = set(self._eligible.keys()).intersection(set(self.data[nifty])) if nifty else list(self._eligible.keys()) 
+            if not len(keys):
+                warnings.warn('No matching Stocks Found. Increase Distance or Nifty Index')
+                return None
+        else:
+            keys = custom_stocks
         
         values = []
         one_can = []
@@ -155,7 +159,7 @@ class Investing(AnalyseStocks):
             return self.picked
         
         
-    def show_full_stats(self, budget, risk, High = 'HIGH', Close = 'CLOSE', delta:float=1, diff:float = 13, nifty:str = 'nifty_500',):
+    def show_full_stats(self, budget,risk, custom_stocks:bool = False, High = 'HIGH', Close = 'CLOSE', delta:float=1, diff:float = 13, nifty:str = 'nifty_500'):
         '''
         Show Extra Stats
         args:
@@ -166,8 +170,10 @@ class Investing(AnalyseStocks):
             delta: Value above the Last Highest Traded Price
             nifty: nifty index to consider
             diff: MAx Allowed Difference between Line and the Price. diff is the %  of the Recent Closing Price
+            custom_stocks: Whether to override in place of Custom
         '''
-        self.picked = self.calculate(budget, High, Close, delta, nifty = nifty, diff = diff, show_only = False)
+        self.picked = self.calculate(budget, custom_stocks, High, Close, delta, nifty = nifty, diff = diff, show_only = False)
+
         
         expec_change = []
         max_risk = []

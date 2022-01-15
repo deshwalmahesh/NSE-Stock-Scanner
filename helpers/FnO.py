@@ -4,8 +4,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from .nse_data import NSEData
+from .plotting import Plots
 
 NSE = NSEData()
+PLT = Plots()
 
 
 def get_next_expiry_date(expiry_type:str = 'monthly'):
@@ -33,7 +35,7 @@ def get_next_expiry_date(expiry_type:str = 'monthly'):
     return expiry_dates
 
 
-def analyse_open_interest(symbol, compare_with:tuple = ('openInterest','changeinOpenInterest','totalTradedVolume','change'), expiry_dates:tuple = None, top_n:int = 5, expiry_type:str = 'monthly'):
+def analyse_option_chain(symbol, compare_with:tuple = ('openInterest','changeinOpenInterest','totalTradedVolume','change'), expiry_dates:tuple = None, top_n:int = 5, expiry_type:str = 'monthly', plot:bool = True, fig_size = (25,10)):
     '''
     Get the Option Chain's Open Interest for analysis. You can read more about it at: https://www.quora.com/How-do-I-read-analyse-the-option-chain-of-a-stock-to-intraday-trade-with-clarity-NSE
     args:
@@ -42,6 +44,8 @@ def analyse_open_interest(symbol, compare_with:tuple = ('openInterest','changein
         expiry_dates: List of Expiry dates: In ORDER with format such as: '29-Nov-2021'. Run FnO.get_next_expiry_date() to get a list of next expiry dates. If None, Nearest Date is used
         top_n: How many top values, EACH of Calls and Put to return
         expiry_type: Monthly (for equity and indoces both) or Weekly (for indices only) if in case there is no expiry_dates set
+        plot: Whether to plot the figure or not
+        fig_sizee: Size of figure per subplot. Set according to the values you want to plot
     ''' 
     if symbol in ['NIFTY','BANKNIFTY','FINNIFTY']:
         url = f"https://www.nseindia.com/api/option-chain-indices?symbol={symbol}"
@@ -81,37 +85,7 @@ def analyse_open_interest(symbol, compare_with:tuple = ('openInterest','changein
         expiry_dates = [datetime.strptime(x, "%d-%b-%Y").strftime("%d-%b-%Y") for x in expiry_dates]   
     df = df[df['expiry_date'].isin(expiry_dates)]
     
-    # plotting
-    length = len(compare_with)
-    odd = length%2
-    rows = (length//2) + 1 if odd else length//2
-    f,ax = plt.subplots(rows,2,figsize = (25,10*rows))
-    f.suptitle(f"{symbol} Option Chain Analysis | Expiry : {sup_plot_text_date}", y = 0.93, fontsize = 17, weight = 600, color = 'teal')
-    ax = ax.ravel()
-    for i,comp_with in enumerate(compare_with):
-
-        ax[i].set_title(comp_with, pad = 13, fontweight = 500, color = 'blue',fontsize = 15)
-
-        if comp_with == 'changeinOpenInterest': # change has to be depicted in + nd -
-            topn_df = pd.concat([df[df['contract_type'] == 'Calls_CE'].nlargest(top_n, 'absChangeOI'),df[df['contract_type'] == 'Puts_PE'].nlargest(top_n, 'absChangeOI')])
-        
-        elif comp_with == 'change': # change has to be depicted in positive and negative
-            topn_df = pd.concat([df[df['contract_type'] == 'Calls_CE'].nlargest(top_n, 'absChange'),df[df['contract_type'] == 'Puts_PE'].nlargest(top_n, 'absChange')])
-
-        else:
-            topn_df = pd.concat([df[df['contract_type'] == 'Calls_CE'].nlargest(top_n, comp_with),df[df['contract_type'] == 'Puts_PE'].nlargest(top_n, comp_with)])
-
-        fig = sns.barplot(x="strike_price", y=comp_with, hue="contract_type", data = topn_df, palette = {'Calls_CE': 'tab:green','Puts_PE': 'tab:red'}, ci = None, ax = ax[i])
-
-        for c in fig.containers:
-            fig.bar_label(c, fmt='%.0f', label_type='edge', padding=5, color = 'black', fontsize = 15)
-            fig.margins(y=0.3)
-
-        fig.set_ylabel(comp_with, labelpad = 10,fontsize = 13)
-        fig.set_xlabel('Strike Price (in Rupees)', labelpad = 10, fontsize = 13)
-        fig.grid()
-
-    if odd:
-        ax[-1].set_axis_off()
+    if plot:
+        PLT.plot_Option_chain(symbol, df, compare_with, top_n, sup_plot_text_date, fig_size=fig_size)
 
     return df

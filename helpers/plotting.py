@@ -3,6 +3,7 @@ import numpy as np
 import plotly.graph_objects as go
 import plotly.io as pio
 import matplotlib.pyplot as plt
+import seaborn as sns
 from random import sample
 import json
 
@@ -23,7 +24,7 @@ class Plots():
         self.indices = {'nifty_50': 'Nifty 50','nifty_100':'Nifty 100','nifty_200':'Nifty 200','nifty_500':'Nifty 500'}
 
                      
-    def _plot_candlesticks(self,df, names = ('DATE','OPEN','CLOSE','LOW','HIGH'), mv:list = [200], slider:bool = False, fig_size:bool = (1400,700)):
+    def plot_candlesticks(self,df, names = ('DATE','OPEN','CLOSE','LOW','HIGH'), mv:list = [200], slider:bool = False, fig_size:bool = (1400,700)):
         '''
         Plot a candlestick on a given dataframe
         args:
@@ -66,7 +67,7 @@ class Plots():
             dt_obs = [d.strftime("%Y-%m-%d %H:%M:%S") for d in stocks['DATE']]
             # isolate missing timestamps
             dt_breaks = [d for d in dt_all.strftime("%Y-%m-%d %H:%M:%S").tolist() if not d in dt_obs]
-            
+
             rangebreaks=[dict(dvalue = freq*60*1000, values=dt_breaks)]
             
             range_selector = dict(buttons = list([
@@ -89,7 +90,7 @@ class Plots():
 
 
         candle.update_layout(autosize = False, width = fig_size[0], height = fig_size[1],
-                             title = {'text': f"{stocks['SYMBOL'][0]} | {self.all_stocks[stocks['SYMBOL'][0]]}",'y':0.97,'x':0.5,
+                             title = {'text': f"{stocks['SYMBOL'][0]} | {self.all_stocks[stocks['SYMBOL'][0]].split('_')[1]}",'y':0.97,'x':0.5,
                                       'xanchor': 'center','yanchor': 'top'},
                              margin=dict(l=30,r=30,b=30,t=30,pad=2),
                              paper_bgcolor="lightsteelblue")
@@ -98,7 +99,7 @@ class Plots():
         candle.show()
 
 
-    def _plot_pivot(self, name:str, piv_data, plot_size:tuple = (25,7)):
+    def plot_pivot(self, name:str, piv_data, plot_size:tuple = (25,7)):
         '''
         Plot Pivot points with Pivot, Upper Bound, Lower Bound, Support-1, Resistance-1
         args:
@@ -142,3 +143,48 @@ class Plots():
             
         plt.legend()
         plt.show()
+
+
+    def plot_Option_chain(self,symbol:str, df, compare_with, top_n:int, sup_plot_text_date: str, fig_size = (25,10)):
+        '''
+        Plot the N values for option chain. Takes input from with FnO.analyse_option_chain()
+        args:
+            symbol: Name of the Stock to analyse
+            df: Original Data Frame
+            compare_with: DataFrame of the stock which to want to compare with
+            top_n: Plot the top-N values only
+            sup_plot_text_date: Text Date of Expiry
+            fig_shape: Shaoe of figure per subplot. Set according to the values you want to plot
+        '''
+        w,h = fig_size
+        length = len(compare_with)
+        odd = length%2
+        rows = (length//2) + 1 if odd else length//2
+        f,ax = plt.subplots(rows,2,figsize = (w,h*rows))
+        f.suptitle(f"{symbol} Option Chain Analysis | Expiry : {sup_plot_text_date}", y = 0.93, fontsize = 17, weight = 600, color = 'teal')
+        ax = ax.ravel()
+        for i,comp_with in enumerate(compare_with):
+
+            ax[i].set_title(comp_with, pad = 13, fontweight = 500, color = 'blue',fontsize = 15)
+
+            if comp_with == 'changeinOpenInterest': # change has to be depicted in + nd -
+                topn_df = pd.concat([df[df['contract_type'] == 'Calls_CE'].nlargest(top_n, 'absChangeOI'),df[df['contract_type'] == 'Puts_PE'].nlargest(top_n, 'absChangeOI')])
+            
+            elif comp_with == 'change': # change has to be depicted in positive and negative
+                topn_df = pd.concat([df[df['contract_type'] == 'Calls_CE'].nlargest(top_n, 'absChange'),df[df['contract_type'] == 'Puts_PE'].nlargest(top_n, 'absChange')])
+
+            else:
+                topn_df = pd.concat([df[df['contract_type'] == 'Calls_CE'].nlargest(top_n, comp_with),df[df['contract_type'] == 'Puts_PE'].nlargest(top_n, comp_with)])
+
+            fig = sns.barplot(x="strike_price", y=comp_with, hue="contract_type", data = topn_df, palette = {'Calls_CE': 'tab:green','Puts_PE': 'tab:red'}, ci = None, ax = ax[i])
+
+            for c in fig.containers:
+                fig.bar_label(c, fmt='%.0f', label_type='edge', padding=5, color = 'black', fontsize = 15)
+                fig.margins(y=0.3)
+
+            fig.set_ylabel(comp_with, labelpad = 10,fontsize = 13)
+            fig.set_xlabel('Strike Price (in Rupees)', labelpad = 10, fontsize = 13)
+            fig.grid()
+
+        if odd:
+            ax[-1].set_axis_off()

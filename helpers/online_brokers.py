@@ -133,7 +133,7 @@ class KiteZerodha():
             df['52W H'] = np.nan
             df['52W L'] = np.nan
             df['SYMBOL'] = name
-            return df.loc[:,["DATE","OPEN","HIGH","LOW","CLOSE","52W H","52W L","SYMBOL"]].sort_index(ascending = False)
+            return df.loc[:,["DATE","OPEN","HIGH","LOW","CLOSE","52W H","52W L","SYMBOL"]].sort_index(ascending = False).reset_index(drop = True)
 
         except Exception as e:
             print('Error in fetching Data. Check proper parameters:\n',e)
