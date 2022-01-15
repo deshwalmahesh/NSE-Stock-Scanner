@@ -705,7 +705,7 @@ class AnalyseStocks(DataHandler):
         return dict(sorted(result.items(), key = lambda x: x[1], reverse= True))
 
                      
-    def _plot_candlesticks(self,df, names = ('DATE','OPEN','CLOSE','LOW','HIGH'), mv:list = [200], slider = False):
+    def _plot_candlesticks(self,df, data_type:str, freq = None, names = ('DATE','OPEN','CLOSE','LOW','HIGH'), mv:list = [44], slider = False, fig_size = (1400,700)):
         '''
         Plot a candlestick on a given dataframe
         args:
@@ -714,6 +714,7 @@ class AnalyseStocks(DataHandler):
             mv: Moving Averages
             slider: Whether to have below zoom slider or not
         '''
+        assert (data_type != 'day') and freq, "With data_type other than 'day', there must be the minimum interval of data"
         stocks = df.copy()
         stocks.sort_index(ascending=False, inplace = True)  # Without reverse, recent rolling mean will be either NaN or equal to the exact value
 
@@ -722,40 +723,55 @@ class AnalyseStocks(DataHandler):
         mv = [] if not mv else mv # just in case you don't want to have any moving averages
         colors = sample(self.colors,len(mv))
 
-        
         # To remove gaps in candles due to Non- Trading days
-        dt_all = pd.date_range(end=stocks.iloc[0,0],start=stocks.iloc[-1,0]) # starting DATE to END date present here
-        dt_obs = [d.strftime("%Y-%m-%d") for d in pd.to_datetime(stocks.DATE)]
-        non_trading_days = [d for d in dt_all.strftime("%Y-%m-%d").tolist() if not d in dt_obs]
-        
+        if data_type == 'day':
+            dt_all = pd.date_range(start=stocks.iloc[0,0],end=stocks.iloc[-1,0])
+            dt_obs = [d.strftime("%Y-%m-%d") for d in pd.to_datetime(stocks.DATE)]
+            dt_breaks = [d for d in dt_all.strftime("%Y-%m-%d").tolist() if not d in dt_obs]
 
-        candle = go.Figure(data = [go.Candlestick(x = stocks[Date], name = 'X',
-                                                       open = stocks[Open], 
-                                                       high = stocks[High], 
-                                                       low = stocks[Low], 
-                                                       close = stocks[Close], opacity = 0.9),])
+            rangebreaks=[dict(values=dt_breaks)]
+            
+            range_selector = dict(buttons = list([
+                    dict(count = 1, label = '1M', step = 'month', stepmode = 'backward'),
+                    dict(count = 6, label = '6M', step = 'month', stepmode = 'backward'),
+                    dict(count = 1, label = '1Y', step = 'year', stepmode = 'backward'),
+                    dict(step = 'all')]))
+
+        else:
+            # grab first and last observations from df.date and make a continuous date range from that
+            dt_all = pd.date_range(start=stocks['DATE'].iloc[0],end=stocks['DATE'].iloc[-1], freq = f'{str(freq)}min')
+
+            # check which dates from your source that also accur in the continuous date range
+            dt_obs = [d.strftime("%Y-%m-%d %H:%M:%S") for d in stocks['DATE']]
+
+            # isolate missing timestamps
+            dt_breaks = [d for d in dt_all.strftime("%Y-%m-%d %H:%M:%S").tolist() if not d in dt_obs]
+            rangebreaks=[dict(dvalue = freq*60*1000, values=dt_breaks)]
+            
+            range_selector = dict(buttons = list([
+                    dict(count = 5, label = '5Min', step = 'minute', stepmode = 'backward'),
+                    dict(count = 15, label = '15Min', step = 'minute', stepmode = 'backward'),
+                    dict(count = 1, label = '1D', step = 'day', stepmode = 'backward'),
+                    dict(step = 'all')]))
+
+        
+        candle = go.Figure(data = [go.Candlestick(opacity = 0.9, x = stocks[Date], name = 'X',
+                                                  open = stocks[Open], high = stocks[High], low = stocks[Low], close = stocks[Close]),])
+        
         for i in range(len(mv)):
             stocks[f'{str(mv[i])}-SMA'] = stocks[Close].rolling(mv[i], min_periods = 1).mean()
             candle.add_trace(go.Scatter(name=f'{str(mv[i])} MA',x=stocks[Date], y=stocks[f'{str(mv[i])}-SMA'], 
                                              line=dict(color=colors[i], width=1.1)))
 
-        candle.update_xaxes(
-            title_text = 'Date',
-            rangeslider_visible = True,
-            rangeselector = dict(
-                buttons = list([
-                    dict(count = 1, label = '1M', step = 'month', stepmode = 'backward'),
-                    dict(count = 6, label = '6M', step = 'month', stepmode = 'backward'),
-                    dict(count = 1, label = 'YTD', step = 'year', stepmode = 'todate'),
-                    dict(count = 1, label = '1Y', step = 'year', stepmode = 'backward'),
-                    dict(step = 'all')])),
-                    rangebreaks=[dict(values=non_trading_days)])
+            
+        candle.update_xaxes(title_text = 'Date', rangeslider_visible = slider, rangeselector = range_selector, rangebreaks=rangebreaks)
 
-        candle.update_layout(autosize = False, width = 1400, height = 700,
+
+        candle.update_layout(autosize = False, width = fig_size[0], height = fig_size[1],
                              title = {'text': f"{stocks['SYMBOL'][0]} | {self.all_stocks[stocks['SYMBOL'][0]]}",'y':0.97,'x':0.5,
                                       'xanchor': 'center','yanchor': 'top'},
                              margin=dict(l=30,r=30,b=30,t=30,pad=2),
-                             paper_bgcolor="lightsteelblue",xaxis_rangeslider_visible=slider)
+                             paper_bgcolor="lightsteelblue")
 
         candle.update_yaxes(title_text = 'Price in Rupees', tickprefix = u"\u20B9" ) # Rupee symbol
         candle.show()
