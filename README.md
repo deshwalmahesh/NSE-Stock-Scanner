@@ -24,10 +24,10 @@ _______________________________________________________________
 ## Usage Steps: 
 
 1. **Download and Install** [Python 3.7 and above](https://www.python.org/downloads/)
-2.  Open Terminal ( For Linux) or Command Prompt or Git Shell in Windows
-3. Run the following Commands:
+2. `Fork` or `Clone` the project. For Non- tech, Windows users, find `Fork` button on upper right hand corner, fork it. Look for the **Green** `Code` button and download the zip file, extract it.
+3. Find and open the directory by the name **NSE-Stock-Scanner** inside above zip file. Open Terminal ( For Linux) or Command Prompt or Git Shell in Windows inside the directory.
+4. Run the following Commands:
 ```
-git clone https://github.com/deshwalmahesh/NSE-Stock-Scanner.git (For Windows users, see for the **Green** `Code` button and download the zip file)
 cd ./NSE-Stock-Scanner
 pip install -r requirements.txt
 jupyter lab
