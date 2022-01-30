@@ -1,5 +1,4 @@
 from .datahandler import *
-from random import sample
 import plotly.graph_objects as go
 import plotly.io as pio
 from .candlestick import *
@@ -7,7 +6,7 @@ from ta.trend import ADXIndicator, macd_diff, cci
 from ta.volatility import average_true_range
 from .nse_data import NSEData
 from .plotting import Plots
-import matplotlib.pyplot as plt
+import numpy as np
 
 CP = CandlePattern()
 NSE = NSEData()
@@ -56,7 +55,6 @@ class AnalyseStocks(DataHandler):
                         result.append(sector)
             return result
 
-    
 
     def is_ma_eligible(self, df, limit:float, mv = 44, names:tuple = ('DATE','OPEN','CLOSE','LOW','HIGH')):
         '''

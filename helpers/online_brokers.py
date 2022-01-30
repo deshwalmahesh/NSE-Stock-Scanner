@@ -39,9 +39,10 @@ class KiteZerodha():
             self.data = json.load(f)
 
         
-        self.data_day_limit = {60:400, 30:200, 15:200, 5:100, 3:100, 4:100, 2:60}
+        self.data_day_limit = {60:400, 30:200, 15:200, 5:100, 3:100, 4:100, 2:60,}
 
-        self.name_code_mapping = {'HAVELLS':2513665,"MCDOWELL-N":2674433,"HINDPETRO":359937,"BHARTIARTL":2714625,"RBLBANK":4708097,"JINDALSTEL":1723649,"GRASIM":315393,"RAMCOCEM":523009}
+        self.name_code_mapping = {'HAVELLS':2513665,"MCDOWELL-N":2674433,"HINDPETRO":359937,"BHARTIARTL":2714625,"RBLBANK":4708097,"JINDALSTEL":1723649,"GRASIM":315393,"RAMCOCEM":523009,
+        "TATAPOWER":877057,"BSOFT":1790465,"CIPLA":177665,"ADANIENT":6401}
 
         self.kite_basic_urls = {"base_url":"https://kite.zerodha.com/",'login_url' : "https://kite.zerodha.com/api/login","two_factor_url":"https://kite.zerodha.com/api/twofa",
             "positions":"https://kite.zerodha.com/oms/portfolio/positions","holdings":'https://kite.zerodha.com/oms/portfolio/holdings',"margins":"https://kite.zerodha.com/oms/user/margins",
@@ -91,30 +92,46 @@ class KiteZerodha():
         return response.json()
 
     
-    def get_historical_minutes_data(self, name:str, code:int = None, interval:int = 5, starting_from_date:str = None, no_days_back:int = 7, get_latest_only:bool = False):
+    def get_historical_data(self, name:str, data_type:str, code:int = None, interval:int = 5, starting_from_date:str = None, no_days_back:int = 7, include_live:bool = False):
         '''
         Get minute by minute historical data
         args:
             name: Name of the stock. According to NSE Website and the data we have
+            data_type: One of [day, min]
             code: Code for the stock
             interval: Which interval data in minutes you want to get
-            no_days_back: Data to gather for Number of days in past starting from the "from_date"
             starting_from_date: Enter the date from which you want to have the data to be gether in the format "01/01/2022". If None, current day will be taken as starting day
-            get_latest_only: Whether to get the current Day's data only
+            no_days_back: Data to gather for Number of days in past starting from the "from_date"
+            include_live: Whether to include current Day's live data
         '''
-        no_days_back = 0 if get_latest_only else no_days_back
+        if data_type in ('minute', 'intra', 'min'):
+            assert interval in [2,3,4,5,10,15,30,60], "Please input interval data within minutes from one of the: [2,3,4,5,10,15,30, 60]"
+            limit = self.data_day_limit[interval]
+            assert no_days_back <= limit, f"Can not get past {no_days_back} days data when interval is {interval}. Max allowed days are {limit} from 'starting_from_date'. Either increase interval or decrease no_days_back"
 
-        assert interval in [2,3,4,5,10,15,30,60], "Please input interval data within minutes from one of the: [2,3,4,5,10,15,30, 60]"
-        assert name in self.data['all_stocks'], "Enter a valid stock name. Check NSE website for code"
+        elif data_type in  ("day", "daily"):
+            interval = None
+            assert no_days_back < 401, f"Can not get past {no_days_back} days data. Max allowed days are {400} from 'starting_from_date'. Either increase interval or decrease no_days_back"
+
+        else:
+            assert False, "Enter proper value for the parameter 'data_type'. One of: day / min"
+   
+
+        assert (name in self.data['all_stocks']) or (name in self.name_code_mapping) or (code), "Enter a valid stock name OR code. Check NSE website for code"
         assert name in self.name_code_mapping, "Name and it's code has not been updated. Help me help you update all 1600 names and code. Please find the code and Update the file or raise an issue / feature request for specific stock"
         
-        limit = self.data_day_limit[interval]
-        assert no_days_back <= limit, f"Can not get past {no_days_back} days data when interval is {interval}. Max allowed days are {limit} from 'starting_from_date'. Either increase interval or decrease no_days_back"
-    
         code = self.name_code_mapping[name] if not code else code
+
         today = datetime.today()
+        include_live = True if (((today.hour > 14 and today.minute > 30) or (today.hour < 10 and today.minute < 15)) and include_live) else include_live
+
         if not starting_from_date:
-            from_date = today
+            if (not include_live) and  (today.hour >= 9):
+                from_date = today - timedelta(days=1)
+                
+            else:
+                from_date = today
+                
         else:
             from_date = datetime.strptime(starting_from_date, '%d/%m/%Y')
         
@@ -123,12 +140,28 @@ class KiteZerodha():
         to_date = to_date.strftime("%Y-%m-%d")
         from_date = from_date.strftime("%Y-%m-%d")
 
-        url = f"https://kite.zerodha.com/oms/instruments/historical/{code}/{interval}minute?user_id={self.user_id}&oi=1&from={to_date}&to={from_date}"
+        if data_type == 'min':        
+            url = f"https://kite.zerodha.com/oms/instruments/historical/{code}/{interval}minute?user_id={self.user_id}&oi=1&from={to_date}&to={from_date}"
+        else:
+            url = url = f"https://kite.zerodha.com/oms/instruments/historical/{code}/day?user_id={self.user_id}&oi=1&from={to_date}&to={from_date}"
         
         try:
-            data = self.session.get(url).json()['data']['candles']
+            js = self.session.get(url).json()
+
+            try:
+                data = js['data']['candles']
+            except:
+                print("You have been Logged Out. Retrying Login...")
+                self._login()
+                js = self.session.get(url).json()
+                data = js['data']['candles']
+
             df = pd.DataFrame(data)
             df.rename(columns = {0:"DATE",1:"OPEN",2:"HIGH",3:"LOW",4:"CLOSE",5:"VOLUME",6:'UNKNOWN'},inplace = True)
+
+            if data_type == 'day': # need to strip the extra timestamp
+                df["DATE"] = df["DATE"].apply(lambda x: x[:10])
+
             df["DATE"] = pd.to_datetime(df["DATE"])
             df['52W H'] = np.nan
             df['52W L'] = np.nan
@@ -136,7 +169,7 @@ class KiteZerodha():
             return df.loc[:,["DATE","OPEN","HIGH","LOW","CLOSE","52W H","52W L","SYMBOL"]].sort_index(ascending = False).reset_index(drop = True)
 
         except Exception as e:
-            print('Error in fetching Data. Check proper parameters:\n',e)
+            print('Error in fetching Data. Probable Casuses: Not connected to internet or some parameters not passed properly')
 
 
     def download_intraday_data(self, name:str, interval:int, path:str = './intraday_data', overwrite:bool = False):
@@ -154,6 +187,9 @@ class KiteZerodha():
         no_days_back = self.data_day_limit[interval] -1 
         df = self.get_historical_minutes_data(name, interval, None, no_days_back)
         df.to_csv(full_path, index = None)
+
+
+    
 
 
 

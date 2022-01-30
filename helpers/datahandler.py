@@ -6,7 +6,7 @@ from datetime import date, datetime, timedelta
 import pandas as pd
 import numpy as np
 
-from os import listdir, mkdir
+from os import listdir, mkdir, cpu_count
 from shutil import rmtree
 from os.path import join, expanduser
 
@@ -18,6 +18,7 @@ import random
 from multiprocessing import Pool
 
 NSE = NSEData()
+workers = int(0.8*cpu_count())
 
 
 drop = ['SERIES','PREV. CLOSE','VWAP','VOLUME','VALUE','NO OF TRADES', 'LTP']
@@ -216,7 +217,7 @@ class DataHandler:
             print(name,'----',e)
 
 
-    def multiprocess_download_stocks(self,path:str = './data', worker:int=4):
+    def multiprocess_download_stocks(self,path:str = './data'):
         '''
         Multiprocess Download stocks
         args:
@@ -225,7 +226,7 @@ class DataHandler:
         '''
         stocks = self.data['registered_stocks']
 
-        pool = Pool(worker)
+        pool = Pool(workers)
         results = pool.map(self.download_new,stocks)
         pool.close()
         pool.join()

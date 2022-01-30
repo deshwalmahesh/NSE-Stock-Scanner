@@ -188,20 +188,25 @@ class DataHandler:
         return data.sort_index(ascending = False).reset_index()
     
 
-    def download_new(self,name:str, path:str = "./data"):
+    def download_new(self,name:str, path:str = "./data", kind:str = 'daily'):
         '''
         Download a New Stock Data
         args:
             name: ID / name of the Stock
+            path: Path to the directory where downloaded files have to be stored
         '''
-        try:
-            df = self.open_live_stock_data(name)
-            df['DATE'] = pd.to_datetime(df['DATE'])
-            ID, NAME, _ = self.all_stocks[name].split('_')
-            save = f"{path}/{ID}_{NAME}_{str(self.present)}.csv"
-            df.to_csv(save,index=None)
-        except Exception as e:
-            print(name,'----',e)
+        if kind == 'daily':
+            try:
+                df = self.open_live_stock_data(name)
+                df['DATE'] = pd.to_datetime(df['DATE'])
+                ID, NAME, _ = self.all_stocks[name].split('_')
+                save = f"{path}/{ID}_{NAME}_{str(self.present)}.csv"
+                df.to_csv(save,index=None)
+            except Exception as e:
+                print(name,'----',e)
+
+        elif kind == 'minutes':
+            path = './intraday_historical_data'
             pass
 
 

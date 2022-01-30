@@ -1,8 +1,9 @@
 import pandas as pd
 import requests
-from datetime import date
+from datetime import date, datetime,timedelta
 from bs4 import BeautifulSoup
 import json
+import zipfile, io
 
 current_date = date.today()
 
@@ -19,15 +20,19 @@ class NSEData:
               "accept-language": "en-GB,en-US;q=0.9,en;q=0.8,la;q=0.7",
               "sec-ch-ua-platform": "Linux", "sec-ch-ua": '"Chromium";v="94", "Google Chrome";v="94", ";Not A Brand";v="99"'}
 
-        self.session = requests.Session()
-        request = self.session.get(self.baseurl, headers=self.headers)
-        self.cookies = dict(request.cookies)
-        
 
         self.to = current_date.strftime("%d-%m-%Y") # For getting historical data
         self.from_ = current_date.replace(year = current_date.year-2).strftime("%d-%m-%Y") # for getting historical data
-        
+
+        self._force_reset_session()
+
     
+    def _force_reset_session(self):
+        self.session = requests.Session()
+        request = self.session.get(self.baseurl, headers=self.headers)
+        self.cookies = dict(request.cookies)
+
+        
     def get_live_nse_data(self, url:str):
         '''
         Get Live market data available on NSE website as PDF
@@ -246,3 +251,20 @@ def get_mmi(raw = False):
     elif current > 80:
         print("WARNING!!! You might want to book profits. Do not take fresh positions for Investment purpose now. Market is Extremely Greedy")
         
+
+def get_Bhavcopy(start = None, no_days = 5):
+    res = []
+    if not start:
+        start = current_date
+        end = start - timedelta(days = no_days)
+        
+    for i in range(no_days):
+        day = start - timedelta(days = i)
+        try:
+            r = requests.get(f'https://www1.nseindia.com/content/historical/EQUITIES/2022/JAN/cm{day}bhav.csv.zip')
+            z = zipfile.ZipFile(io.BytesIO(r.content))
+            z = z.open(z.namelist()[0])
+            res.append(pd.read_csv(z))
+        except:
+            pass
+    return res

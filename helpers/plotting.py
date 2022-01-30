@@ -4,7 +4,6 @@ import plotly.graph_objects as go
 import plotly.io as pio
 import matplotlib.pyplot as plt
 import seaborn as sns
-from random import sample
 import json
 from datetime import timedelta
 
@@ -47,7 +46,7 @@ class Plots():
         Date, Open, Close, Low, High = names
 
         mv = [] if not mv else mv # just in case you don't want to have any moving averages
-        colors = sample(self.colors,len(mv))
+        colors = np.random.choice(['black','magenta','teal','brown'],len(mv), replace = False)
 
         # To remove gaps in candles due to Non- Trading days
         if kind == 'day':
@@ -61,7 +60,7 @@ class Plots():
                     dict(count = 1, label = '1M', step = 'month', stepmode = 'backward'),
                     dict(count = 6, label = '6M', step = 'month', stepmode = 'backward'),
                     dict(count = 1, label = '1Y', step = 'year', stepmode = 'backward'),
-                    dict(step = 'all')]))
+                    dict(step = 'all',label = 'All')]))
 
         else:
             # grab first and last observations from df.date and make a continuous date range from that
@@ -76,20 +75,15 @@ class Plots():
 
             rangebreaks=[dict(dvalue = freq*60*1000, values=dt_breaks)]
             
-            range_selector = dict(buttons = list([
-                    dict(count = 5, label = '5Min', step = 'minute', stepmode = 'backward'),
-                    dict(count = 15, label = '15Min', step = 'minute', stepmode = 'backward'),
-                    dict(count = 1, label = '1D', step = 'day', stepmode = 'backward'),
-                    dict(step = 'all')]))
+            range_selector = dict(buttons = list([dict(step = 'all', label = 'All')]))
 
-        
         candle = go.Figure(data = [go.Candlestick(opacity = 0.9, x = stocks[Date], name = 'X',
                                                   open = stocks[Open], high = stocks[High], low = stocks[Low], close = stocks[Close]),])
         
         for i in range(len(mv)):
             stocks[f'{str(mv[i])}-SMA'] = stocks[Close].rolling(mv[i], min_periods = 1).mean()
             candle.add_trace(go.Scatter(name=f'{str(mv[i])} MA',x=stocks[Date], y=stocks[f'{str(mv[i])}-SMA'], 
-                                             line=dict(color=colors[i], width=1.1)))
+                                             line=dict(color=colors[i], width=1.7)))
 
             
         candle.update_xaxes(title_text = 'Date', rangeslider_visible = slider, rangeselector = range_selector, rangebreaks=rangebreaks)
@@ -156,7 +150,7 @@ class Plots():
         plt.show()
 
 
-    def pivot_plot(self,pivot_data, fig=None, name:str = None, fig_size:bool = (1000,600)):
+    def pivot_plot(self,pivot_data, fig=None, name:str = None, fig_size:bool = (1000,600), sr_levels:int = 1):
         '''
         Plot Pivot points with Pivot, Upper Bound, Lower Bound, Support-1, Resistance-1
         args:
@@ -165,6 +159,7 @@ class Plots():
             fig: Plotly Figure with Candlesticks data 
             fig_size: Size of Figure as (Width, Height)
             name: Name of stock
+            sr_levels: Number of Support Resistance Levels. Number from 1,2,3
         '''
         piv_data = pivot_data.copy()
         if not fig:
@@ -182,18 +177,15 @@ class Plots():
             if i < total-1:
                 curr_date = dates[i]
                 next_date = dates[i+1]
+                X_range = pd.date_range(curr_date, next_date, freq = '15T')
 
-                fig.add_shape(type="line", x0=curr_date, x1=next_date, y0=data['UB'], y1=data['UB'],line_width=1.5, line_dash="dot", line_color="red") # Horizontal line
-                
-                fig.add_shape(type="line", x0=curr_date, x1=next_date, y0=data['Pivot'],  y1=data['Pivot'], line_width=2, line_color="black")
-                
-                
-                fig.add_shape(type="line", x0=curr_date, x1=next_date, y0=data['LB'],  y1=data['LB'], line_width=1.5, line_dash="dot", line_color="green") # Horizontal line
+                fig.add_traces(go.Scatter(x=X_range,y = np.repeat([data['UB']], 100), mode="lines",line_dash="dot",line_color="red",showlegend=False, name='UB',line=dict(width = 1.5)))
+                fig.add_traces(go.Scatter(x=X_range,y = np.repeat([data['Pivot']], 100), mode="lines",line_color="black",showlegend=False, name='Pivot',line=dict(width = 2)))
+                fig.add_traces(go.Scatter(x=X_range,y = np.repeat([data['LB']], 100), mode="lines",line_color="green",showlegend=False, name='LB',line_dash="dot",line=dict(width = 1.5)))
 
-                fig.add_shape(type="line", x0=curr_date, x1=next_date, y0=data['S-1'],  y1=data['S-1'], line_width=2, line_color="green") # Horizontal line
-                
-                
-                fig.add_shape(type="line", x0=curr_date, x1=next_date, y0=data['R-1'],  y1=data['R-1'], line_width=2, line_color="red") # Horizontal line
+                for j in range(1,sr_levels+1):
+                    fig.add_traces(go.Scatter(x=X_range,y = np.repeat([data[f"S-{str(j)}"]], 100), mode="lines",line_color="green",showlegend=False, name=f"S-{str(j)}",line=dict(width = 1.3+j)))
+                    fig.add_traces(go.Scatter(x=X_range,y = np.repeat([data[f"R-{str(j)}"]], 100), mode="lines",line_color="red",showlegend=False, name=f"R-{str(j)}",line=dict(width = 1.3+j)))
 
                 fig.add_vline(x=curr_date, line_width=1, line_dash="dot", line_color="black")
 
