@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 import threading
 from logging import error
 
+
 class Alerts():
     def __init__(self, broker):
         '''
@@ -37,13 +38,14 @@ class Alerts():
             try:
                 result = {}
                 for name in stocks:
-                    df = broker.get_historical_data(name, interval, include_live = True, no_days_back = 20) # open each stock one by one
+                    df = broker.get_historical_data(name,data_type = 'min', no_days_back= 10, interval = interval, include_live = True) # open each stock one by one
                     for strategy in strategies.keys():
-                        if strategies[strategy](df):
+                        if strategies[strategy](df.iloc[1:,:]): # recent one will be the newest formed live candle formed
                             result[name] = strategy
 
                 self.raise_alert(result) # We need a thread because if this task takes too long, the data 
                 retry = 0
+                sleep(((df.iloc[0,0].replace(tzinfo=None) + timedelta(minutes = interval, seconds = 2)) - datetime.now() ).total_seconds())
             
             except Exception as e:
                 error(f'Error Occured: {e} Retrying for next {interval} minutes candle')
@@ -52,9 +54,7 @@ class Alerts():
                 if retry > 3:
                     error("Maximum retries reached. Probable causes can be Logout from broker or Network issues. Exiting program")
                     break
-            
-            # sleep(((df.iloc[0,0].replace(tzinfo=None) + timedelta(minutes = interval)) - datetime.now()).total_seconds())
-
+        
 
     def raise_alert(self,results:dict, silent:bool = False, show_popup:bool = False): # another background thread
         '''
