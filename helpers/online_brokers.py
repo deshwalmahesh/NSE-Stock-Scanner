@@ -41,8 +41,10 @@ class KiteZerodha():
         
         self.data_day_limit = {60:400, 30:200, 15:200, 5:100, 3:100, 4:100, 2:60,}
 
-        self.name_code_mapping = {'HAVELLS':2513665,"MCDOWELL-N":2674433,"HINDPETRO":359937,"BHARTIARTL":2714625,"RBLBANK":4708097,"JINDALSTEL":1723649,"GRASIM":315393,"RAMCOCEM":523009,
-        "TATAPOWER":877057,"BSOFT":1790465,"CIPLA":177665,"ADANIENT":6401}
+        self.name_code_mapping = {"NIFTY":256265,"BANKNIFTY":260105,'HAVELLS':2513665,"MCDOWELL-N":2674433,"HINDPETRO":359937,"BHARTIARTL":2714625,"RBLBANK":4708097,"JINDALSTEL":1723649,"GRASIM":315393,"RAMCOCEM":523009,
+        "TATAPOWER":877057,"BSOFT":1790465,"CIPLA":177665,"ADANIENT":6401, "IDEA":3677697, "CHAMBLFERT":163073, "DELTACORP":3851265,"IDFC":3060993, "GMRINFRA":3463169,"PVR":3365633,"GNFC":300545,"METROPOLIS":2452737,
+        "BANKBARODA":1195009,"ABCAPITAL":5533185,"HINDCOPPER":4592385,"AUBANK":5436929,"CHOLAFIN":175361,"IEX":56321,"BATAINDIA":94977,"CANBK":2763265,"BALRAMCHIN":87297,"INTELLECT":1517057}
+
 
         self.kite_basic_urls = {"base_url":"https://kite.zerodha.com/",'login_url' : "https://kite.zerodha.com/api/login","two_factor_url":"https://kite.zerodha.com/api/twofa",
             "positions":"https://kite.zerodha.com/oms/portfolio/positions","holdings":'https://kite.zerodha.com/oms/portfolio/holdings',"margins":"https://kite.zerodha.com/oms/user/margins",

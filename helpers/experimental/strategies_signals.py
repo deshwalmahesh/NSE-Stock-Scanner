@@ -2,6 +2,7 @@ from logging import warn
 import numpy as np
 import pandas as pd
 from ..intraday import In
+from ..FnO import analyse_option_chain
 
 
 warn('''WARNING: These strategies ONLY generate SIGNALS as a SCREENER so that you can you can do some other work work until the alert goes off. It does not mean that you have to Buy or Sell or execute order. 
@@ -222,6 +223,35 @@ def rsi_divergence(data, names:tuple = ('OPEN','CLOSE','LOW','HIGH'), upper_thre
     
     return None
 
+
+def option_chain_SR(data, name, gap_reference:float = 0.0075, col_names:tuple = ('OPEN','CLOSE','LOW','HIGH')):
+    '''
+    Look if a stock's High / Low price has reached around the highest Calls or Puts Open Interest. Look at the Price Action to see if it reverses fro mthe position
+    args:
+        data: DataFrame of the stock
+        name: Name of the scrip / stock / index
+        col_names: Column names showing ('OPEN','CLOSE','LOW','HIGH') in the same order
+        gap_reference: 0.03 means that when the gap between S-R and High / Low is within the 0.03% of the recent Close, then only consider it
+    '''
+    assert name in In.data['f&o'], f"{name} not listed in Futures and Options"
+    Open, Close, Low, High = col_names
+
+    df = data.copy()
+
+    df_option = analyse_option_chain(name, compare_with = 'openInterest', plot = False)
+    resistance_index = df_option[df_option['contract_type'] == 'Calls_CE']["openInterest"].idxmax()
+    support_index = df_option[df_option['contract_type'] == 'Puts_PE']["openInterest"].idxmax()
+    support, resistance = df_option.loc[support_index, "strike_price"], df_option.loc[resistance_index, "strike_price"]
+    support, resistance
+
+    closing = df.loc[0,Close]
+    if (0 <= resistance - df.loc[0,High] <= closing * gap_reference):
+        return "Sell"
+
+    elif (0 <= df.loc[0,Low] - support <= closing * gap_reference):
+        return "Buy"
+
+    return None
 
 
 
