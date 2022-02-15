@@ -109,6 +109,7 @@ _________________________________________________________________________
 **Ebooks**: Annotations added as I've read the books
 1. [Trading in the zone](https://g.co/kgs/BSuHyC). Best book on psychology I could find till now. 
 2. [High Probability Trading](https://www.amazon.in/High-Probability-Trading-Marcel-Link/dp/0071381562) Good book on strategies
+3. [How to make money in Intraday Trading: Ashwani Gujral](https://www.google.co.in/books/edition/How_to_Make_Money_in_Intraday_Trading/xlZZDwAAQBAJ?hl=en&gbpv=1&printsec=frontcover): Talks about **Indian** market on **Intraday** simply on Pivot Points + Moving Average. Simple Strategy. Simple explanations.
 
 _________________________________________________________________________
 **Coming Next**:
