@@ -120,7 +120,6 @@ secrets.json
 api_keys.py
 
 # Temporary data files
-data/
 tmp/
 temp/
 *.pickle
